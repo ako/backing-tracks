@@ -1,0 +1,15 @@
+# Compiled binary
+backing-tracks
+
+# Temporary files
+*.mid
+/tmp/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store

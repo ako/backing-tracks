@@ -1,0 +1,15 @@
+# Slow Blues in A - 12 Bar Blues
+# A simple blues progression for testing the PoC
+
+track:
+  title: "Slow Blues in A"
+  key: A
+  tempo: 80
+  time_signature: 4/4
+  style: blues
+
+chord_progression:
+  # Standard 12-bar blues pattern
+  pattern: "A7 A7 A7 A7 D7 D7 A7 A7 E7 D7 A7 E7"
+  bars_per_chord: 1
+  repeat: 2

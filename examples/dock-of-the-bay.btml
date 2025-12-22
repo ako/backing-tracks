@@ -1,0 +1,39 @@
+# (Sittin' On) The Dock of the Bay - Otis Redding Style
+# Relaxed soul groove in G major
+
+track:
+  title: "Dock of the Bay"
+  key: G
+  tempo: 104
+  time_signature: 4/4
+  style: soul
+
+chord_progression:
+  # Verse: G - B7 - C - A (repeat)
+  # Bridge: G - E variations
+  # Outro: G - E repeating fade
+  pattern: "G B7 C A G B7 C A G E G E G E G A"
+  bars_per_chord: 1
+  repeat: 2
+
+rhythm:
+  # Laid-back soul strum - gentle with some rests
+  pattern: "D.d.D.dU"
+  swing: 0.55           # Slight swing for soul feel
+
+bass:
+  style: root_fifth     # Simple but solid
+  swing: 0.55
+
+drums:
+  # Gentle soul beat
+  kick:
+    beats: [1, 3]
+  snare:
+    beats: [2, 4]
+  hihat:
+    euclidean:
+      hits: 8
+      steps: 8
+      rotation: 0
+  intensity: 0.5        # Relaxed dynamics

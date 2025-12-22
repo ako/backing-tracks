@@ -1,0 +1,21 @@
+# Pop Progression with Full Band
+# Classic I-V-vi-IV with bass and drums
+
+track:
+  title: "Pop Progression in C (Full Band)"
+  key: C
+  tempo: 120
+  time_signature: 4/4
+  style: pop
+
+chord_progression:
+  pattern: "C G Am F"
+  bars_per_chord: 2
+  repeat: 4
+
+bass:
+  style: root  # Simple root notes
+
+drums:
+  style: rock_beat
+  intensity: 0.8

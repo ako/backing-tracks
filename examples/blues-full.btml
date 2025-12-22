@@ -1,0 +1,23 @@
+# Slow Blues in A with Bass and Drums
+# Full backing track with walking bass and shuffle drums
+
+track:
+  title: "Slow Blues in A (Full Band)"
+  key: A
+  tempo: 80
+  time_signature: 4/4
+  style: blues
+
+chord_progression:
+  # Standard 12-bar blues pattern
+  pattern: "A7 A7 A7 A7 D7 D7 A7 A7 E7 D7 A7 E7"
+  bars_per_chord: 1
+  repeat: 2
+
+bass:
+  style: swing_walking
+  swing: 0.6
+
+drums:
+  style: shuffle
+  intensity: 0.7

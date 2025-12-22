@@ -1,0 +1,25 @@
+# Folk Strumming Example
+# Demonstrates the folk strum pattern (bass-chord-bass-chord)
+
+track:
+  title: "Country Folk"
+  key: G
+  tempo: 100
+  time_signature: 4/4
+  style: folk
+
+chord_progression:
+  pattern: "G G C C G G D D G G C C G D G G"
+  bars_per_chord: 1
+  repeat: 1
+
+rhythm:
+  style: folk           # Bass note on 1,3 - chord on 2,4
+  accent: "1,3"         # Accent the bass notes
+
+bass:
+  style: root_fifth
+
+drums:
+  style: rock_beat
+  intensity: 0.5        # Light drums for folk feel

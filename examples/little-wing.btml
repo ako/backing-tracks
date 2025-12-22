@@ -1,0 +1,55 @@
+# Little Wing - Style Backing Track
+# Ballad style in Em with jazz-influenced chord progression
+# Great for practicing melodic improvisation
+#
+# Features demonstrated:
+#   - Fractional bar notation (Bm*0.5 = half bar)
+#   - Custom strumming pattern (flowing arpeggiated feel)
+#   - Walking bass with swing
+#   - Euclidean drum rhythms
+
+track:
+  title: "Little Wing (Ballad Style)"
+  key: Em
+  tempo: 66
+  time_signature: 4/4
+  style: ballad
+
+chord_progression:
+  # Intro/Verse: 4 bars of 1 chord each
+  # Then: quick changes (2 chords per bar)
+  pattern: "Em G Am Em Bm*0.5 Bbmaj7*0.5 Am*0.5 C*0.5 G*0.5 F*0.5 C*0.5 D*0.5"
+  bars_per_chord: 1
+  repeat: 2
+
+rhythm:
+  # Flowing Hendrix-style arpeggiated pattern
+  # 16th notes: gentle ups and downs with breathing room
+  # D=down d=soft down U=up u=soft up .=rest
+  pattern: "D.u.d.u.D.u.d.uU"
+  swing: 0.55         # Gentle swing for that dreamy feel
+
+bass:
+  style: walking      # More melodic walking bass
+  swing: 0.55         # Match the rhythm swing
+
+drums:
+  # Sparse, dreamy groove
+  kick:
+    euclidean:
+      hits: 3         # Sparse kick pattern
+      steps: 8
+      rotation: 0
+  snare:
+    beats: [2, 4]     # Soft backbeat
+  hihat:
+    euclidean:
+      hits: 5         # Open, breathing hi-hat
+      steps: 8
+      rotation: 1     # Offset for interest
+  ride:
+    euclidean:
+      hits: 3         # Gentle ride accents
+      steps: 8
+      rotation: 2
+  intensity: 0.45     # Very gentle dynamics

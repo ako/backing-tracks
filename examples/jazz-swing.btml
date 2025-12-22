@@ -1,0 +1,22 @@
+# Jazz II-V-I with Swing Feel
+# Classic jazz progression with walking bass and swing drums
+
+track:
+  title: "II-V-I in Bb"
+  key: Bb
+  tempo: 140
+  time_signature: 4/4
+  style: jazz
+
+chord_progression:
+  pattern: "Cm7 F7 Bbmaj7 Bbmaj7"
+  bars_per_chord: 2
+  repeat: 4
+
+bass:
+  style: walking
+  swing: 0.67  # Triplet swing feel
+
+drums:
+  style: jazz_swing
+  intensity: 0.6

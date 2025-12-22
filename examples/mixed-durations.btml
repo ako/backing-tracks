@@ -1,0 +1,25 @@
+# Example: Mixed Chord Durations
+# Demonstrates inline duration notation
+
+track:
+  title: "Mixed Duration Example"
+  key: C
+  tempo: 100
+  time_signature: 4/4
+  style: pop
+
+chord_progression:
+  # Using inline duration notation: ChordSymbol*bars
+  # C for 2 bars, G for 1 bar, Am for 2 bars, F for 1 bar
+  pattern: "C*2 G*1 Am*2 F*1 C*2 G*1 F*2"
+  # Note: When using inline durations, bars_per_chord is only
+  # used for chords that don't specify their own duration
+  bars_per_chord: 1
+  repeat: 2
+
+bass:
+  style: root_fifth
+
+drums:
+  style: rock_beat
+  intensity: 0.7
