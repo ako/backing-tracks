@@ -1,0 +1,46 @@
+# Here Without You - 3 Doors Down Style
+# Power ballad in Bm with arpeggiated feel
+#
+# Features: flowing arpeggio pattern, root_fifth bass, gentle rock drums
+
+track:
+  title: "Here Without You"
+  key: Bm
+  tempo: 82
+  time_signature: 4/4
+  style: rock ballad
+
+chord_progression:
+  # Verse: Bm - A - G - A
+  # Chorus: similar with variation
+  pattern: "Bm A G A Bm A G A Bm A G G A A Bm Bm"
+  bars_per_chord: 1
+  repeat: 2
+
+rhythm:
+  # Flowing arpeggio pattern - gentle picking feel
+  # 16th notes with soft dynamics
+  pattern: "D.u.d.u.D.u.d.u."
+  swing: 0.52           # Very slight swing
+
+bass:
+  style: root_fifth
+  swing: 0.52
+
+drums:
+  # Power ballad drums - restrained but driving
+  kick:
+    beats: [1, 3]
+  snare:
+    beats: [2, 4]
+  hihat:
+    euclidean:
+      hits: 8           # Steady eighth notes
+      steps: 8
+      rotation: 0
+  ride:
+    euclidean:
+      hits: 4           # Sparse ride accents
+      steps: 8
+      rotation: 0
+  intensity: 0.55       # Moderate - builds emotion

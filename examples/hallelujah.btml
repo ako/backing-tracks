@@ -1,0 +1,31 @@
+# Hallelujah - Leonard Cohen Style
+# Fingerpicked folk ballad in C major
+#
+# Features: fingerpick_slow style, sparse arrangement, emotional dynamics
+
+track:
+  title: "Hallelujah (Cohen Style)"
+  key: C
+  tempo: 56
+  time_signature: 4/4
+  style: folk ballad
+
+chord_progression:
+  # Verse progression with the classic vi-IV-I-V movement
+  # "I've heard there was a secret chord..."
+  pattern: "C Am C Am F G C G C Am C Am F G C C"
+  bars_per_chord: 1
+  repeat: 2
+
+rhythm:
+  # Slow, sparse fingerpicking - Leonard Cohen signature
+  style: fingerpick_slow
+
+bass:
+  style: root           # Simple, understated bass
+
+drums:
+  # Very minimal - almost none for true Cohen feel
+  kick:
+    beats: [1]          # Just beat 1
+  intensity: 0.25       # Barely there

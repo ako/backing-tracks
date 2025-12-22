@@ -238,6 +238,28 @@ func generateRhythmPattern(style string, notes ChordVoicing, startTick, duration
 			}
 		}
 
+	case "travis":
+		// Travis picking: alternating bass with finger melody
+		// Pattern: Bass-high-mid-high (thumb-index-middle-index)
+		events = append(events, travisPicking(notes, startTick, duration, ticksPerBar)...)
+
+	case "fingerpick":
+		// Classic folk fingerpicking: Bass on 1,3 + arpeggiated treble
+		// Pattern: Bass-mid-high-mid-Bass-mid-high-mid (per bar)
+		events = append(events, folkFingerpick(notes, startTick, duration, ticksPerBar)...)
+
+	case "arpeggio_up":
+		// Ascending arpeggio on each beat
+		events = append(events, arpeggioPattern(notes, startTick, duration, ticksPerBar, false)...)
+
+	case "arpeggio_down":
+		// Descending arpeggio on each beat
+		events = append(events, arpeggioPattern(notes, startTick, duration, ticksPerBar, true)...)
+
+	case "fingerpick_slow":
+		// Slower, more sparse fingerpicking for ballads
+		events = append(events, slowFingerpick(notes, startTick, duration, ticksPerBar)...)
+
 	default:
 		// Default to whole notes
 		for _, note := range notes {
@@ -377,4 +399,209 @@ func reverseNotes(notes ChordVoicing) ChordVoicing {
 		reversed[len(notes)-1-i] = note
 	}
 	return reversed
+}
+
+// travisPicking generates Travis-style fingerpicking
+// Alternating bass with syncopated treble notes
+// Pattern per beat: Bass-High-Mid-High (thumb plays bass, fingers play treble)
+func travisPicking(notes ChordVoicing, startTick, duration, ticksPerBar uint32) []midiEvent {
+	events := []midiEvent{}
+	eighthNote := ticksPerBar / 8
+	numBars := duration / ticksPerBar
+	if numBars == 0 {
+		numBars = 1
+	}
+
+	// Need at least 3 notes for proper Travis picking
+	if len(notes) < 3 {
+		return events
+	}
+
+	bass := notes[0]        // Root (thumb)
+	fifth := notes[0] + 7   // Fifth for alternating bass
+	mid := notes[1]         // Middle note (middle finger)
+	high := notes[len(notes)-1] // Highest note (index finger)
+
+	for bar := uint32(0); bar < numBars; bar++ {
+		barStart := startTick + bar*ticksPerBar
+
+		// 8 eighth notes per bar
+		// Pattern: B1-H-M-H-B5-H-M-H (Bass1, High, Mid, High, Bass5, High, Mid, High)
+		pattern := []struct {
+			note uint8
+			vel  uint8
+		}{
+			{bass, 80},  // 1: Bass on root
+			{high, 60},  // &: High
+			{mid, 55},   // 2: Mid
+			{high, 60},  // &: High
+			{fifth, 75}, // 3: Bass on fifth
+			{high, 60},  // &: High
+			{mid, 55},   // 4: Mid
+			{high, 60},  // &: High
+		}
+
+		for i, p := range pattern {
+			tick := barStart + uint32(i)*eighthNote
+			noteDuration := eighthNote - 20
+			events = append(events, midiEvent{tick, midi.NoteOn(0, p.note, p.vel)})
+			events = append(events, midiEvent{tick + noteDuration, midi.NoteOff(0, p.note)})
+		}
+	}
+
+	return events
+}
+
+// folkFingerpick generates classic folk fingerpicking pattern
+// Similar to songs like "Dust in the Wind" or Leonard Cohen style
+func folkFingerpick(notes ChordVoicing, startTick, duration, ticksPerBar uint32) []midiEvent {
+	events := []midiEvent{}
+	sixteenthNote := ticksPerBar / 16
+	numBars := duration / ticksPerBar
+	if numBars == 0 {
+		numBars = 1
+	}
+
+	if len(notes) < 3 {
+		return events
+	}
+
+	// Assign notes to fingers
+	bass := notes[0]
+	low := notes[0]
+	if len(notes) > 1 {
+		low = notes[1]
+	}
+	mid := notes[len(notes)/2]
+	high := notes[len(notes)-1]
+
+	for bar := uint32(0); bar < numBars; bar++ {
+		barStart := startTick + bar*ticksPerBar
+
+		// 16 sixteenth notes per bar
+		// Classic pattern: B-L-M-H-M-L-B-L-M-H-M-L-B-L-M-H
+		// (Bass, Low, Mid, High, Mid, Low, repeat with variations)
+		pattern := []struct {
+			note uint8
+			vel  uint8
+		}{
+			{bass, 80}, // 1
+			{mid, 55},  // e
+			{high, 60}, // &
+			{mid, 50},  // a
+			{bass, 75}, // 2
+			{mid, 55},  // e
+			{high, 60}, // &
+			{mid, 50},  // a
+			{bass, 80}, // 3
+			{mid, 55},  // e
+			{high, 60}, // &
+			{mid, 50},  // a
+			{low, 70},  // 4
+			{mid, 55},  // e
+			{high, 60}, // &
+			{mid, 50},  // a
+		}
+
+		for i, p := range pattern {
+			tick := barStart + uint32(i)*sixteenthNote
+			noteDuration := sixteenthNote*2 - 10 // Notes ring a bit
+			events = append(events, midiEvent{tick, midi.NoteOn(0, p.note, p.vel)})
+			events = append(events, midiEvent{tick + noteDuration, midi.NoteOff(0, p.note)})
+		}
+	}
+
+	return events
+}
+
+// slowFingerpick generates a slower, more sparse fingerpicking for ballads
+// Good for Leonard Cohen, Nick Drake style
+func slowFingerpick(notes ChordVoicing, startTick, duration, ticksPerBar uint32) []midiEvent {
+	events := []midiEvent{}
+	eighthNote := ticksPerBar / 8
+	numBars := duration / ticksPerBar
+	if numBars == 0 {
+		numBars = 1
+	}
+
+	if len(notes) < 2 {
+		return events
+	}
+
+	bass := notes[0]
+	mid := notes[len(notes)/2]
+	high := notes[len(notes)-1]
+
+	for bar := uint32(0); bar < numBars; bar++ {
+		barStart := startTick + bar*ticksPerBar
+
+		// Sparse pattern: B---M-H- B---H-M- (eighth notes, - = rest)
+		// Positions: 0, 4, 5 for first half; 0, 4, 5 for second half with variation
+		pattern := []struct {
+			pos  int
+			note uint8
+			vel  uint8
+		}{
+			{0, bass, 80}, // Beat 1: Bass
+			{2, mid, 55},  // Beat 2: Mid
+			{3, high, 60}, // Beat 2&: High
+			{4, bass, 75}, // Beat 3: Bass
+			{6, high, 60}, // Beat 4: High
+			{7, mid, 50},  // Beat 4&: Mid
+		}
+
+		for _, p := range pattern {
+			tick := barStart + uint32(p.pos)*eighthNote
+			noteDuration := eighthNote*2 - 10
+			events = append(events, midiEvent{tick, midi.NoteOn(0, p.note, p.vel)})
+			events = append(events, midiEvent{tick + noteDuration, midi.NoteOff(0, p.note)})
+		}
+	}
+
+	return events
+}
+
+// arpeggioPattern generates ascending or descending arpeggios
+func arpeggioPattern(notes ChordVoicing, startTick, duration, ticksPerBar uint32, descending bool) []midiEvent {
+	events := []midiEvent{}
+	quarterNote := ticksPerBar / 4
+	numBeats := int(duration / quarterNote)
+	if numBeats == 0 {
+		numBeats = 1
+	}
+
+	noteCount := len(notes)
+	if noteCount == 0 {
+		return events
+	}
+
+	// Time per note within a beat
+	noteSpacing := quarterNote / uint32(noteCount)
+
+	for beat := 0; beat < numBeats; beat++ {
+		beatStart := startTick + uint32(beat)*quarterNote
+		vel := uint8(70)
+		if beat%4 == 0 {
+			vel = 80 // Accent beat 1
+		}
+
+		for i := 0; i < noteCount; i++ {
+			noteIdx := i
+			if descending {
+				noteIdx = noteCount - 1 - i
+			}
+
+			tick := beatStart + uint32(i)*noteSpacing
+			noteDuration := noteSpacing - 10
+			noteVel := vel - uint8(i*3) // Softer for later notes
+			if noteVel < 40 {
+				noteVel = 40
+			}
+
+			events = append(events, midiEvent{tick, midi.NoteOn(0, notes[noteIdx], noteVel)})
+			events = append(events, midiEvent{tick + noteDuration, midi.NoteOff(0, notes[noteIdx])})
+		}
+	}
+
+	return events
 }
