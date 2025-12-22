@@ -37,3 +37,42 @@ drums:
       steps: 8
       rotation: 0
   intensity: 0.5        # Relaxed dynamics
+
+# Lyrics - one entry per bar
+lyrics:
+  # Verse 1
+  - "Sittin' in the morning"
+  - "sun"
+  - "I'll be sittin' when the"
+  - "evenin' comes"
+  - "Watching the ships roll"
+  - "in"
+  - "Then I watch 'em roll a-"
+  - "way again, yeah"
+  # Bridge
+  - "I'm sittin' on the dock"
+  - "of the bay"
+  - "Watching the tide"
+  - "roll away"
+  - "I'm just sittin' on the"
+  - "dock of the bay"
+  - "Wastin'"
+  - "time"
+  # Verse 2
+  - "I left my home in"
+  - "Georgia"
+  - "Headed for the 'Frisco"
+  - "bay"
+  - "'Cause I've had nothing to"
+  - "live for"
+  - "And look like nothing's gonna"
+  - "come my way"
+  # Bridge 2
+  - "So I'm just gonna sit"
+  - "on the dock of the bay"
+  - "Watching the tide"
+  - "roll away"
+  - "I'm sittin' on the dock"
+  - "of the bay"
+  - "Wastin'"
+  - "time"

@@ -16,6 +16,7 @@ type Track struct {
 	Rhythm      *Rhythm          `yaml:"rhythm,omitempty"`
 	Bass        *Bass            `yaml:"bass,omitempty"`
 	Drums       *Drums           `yaml:"drums,omitempty"`
+	Lyrics      []string         `yaml:"lyrics,omitempty"` // Lyrics per bar
 }
 
 // TrackInfo contains metadata about the track
