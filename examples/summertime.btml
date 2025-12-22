@@ -1,0 +1,23 @@
+# Summertime - George Gershwin (from Porgy and Bess, 1935)
+# Jazz standard, slow and languid feel
+
+track:
+  title: "Summertime"
+  key: Am
+  tempo: 72
+  time_signature: 4/4
+  style: jazz ballad
+
+chord_progression:
+  # 16-bar jazz standard form
+  pattern: "Am7 Am7 Am7 E7 Am7 Am7 Dm7 Dm7 Am7 Am7 Dm7 E7 Bm7b5 E7 Am7 Am7"
+  bars_per_chord: 1
+  repeat: 2
+
+bass:
+  style: swing_walking
+  swing: 0.6
+
+drums:
+  style: jazz_swing
+  intensity: 0.4

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"backing-tracks/parser"
 )
@@ -209,7 +210,10 @@ func (ld *LiveDisplay) run() {
 	}
 }
 
-// renderFull renders the complete display (initial)
+// Number of bar rows to show at once (scrolling window)
+const visibleRows = 4
+
+// renderFull renders the initial display
 func (ld *LiveDisplay) renderFull() {
 	// Clear screen
 	fmt.Print("\033[2J\033[H")
@@ -223,21 +227,25 @@ func (ld *LiveDisplay) renderFull() {
 	fmt.Println("  " + strings.Repeat("═", 66))
 	fmt.Println()
 
-	ld.displayLines = 3 // Header lines
-
-	// Render all bars
-	for lineStart := 0; lineStart < len(ld.bars); lineStart += ld.barsPerLine {
-		ld.renderBarLine(lineStart, -1, -1, -1)
-		ld.displayLines += 5 // Each bar line takes 5 lines
+	// Render first few rows
+	for row := 0; row < visibleRows; row++ {
+		lineStart := row * ld.barsPerLine
+		if lineStart < len(ld.bars) {
+			ld.renderBarLine(lineStart, -1, -1, -1)
+		} else {
+			// Empty rows
+			for i := 0; i < 5; i++ {
+				fmt.Println()
+			}
+		}
 	}
 
 	// Progress bar
 	fmt.Println()
 	fmt.Printf("  %s  0%%\n", strings.Repeat("░", 50))
-	ld.displayLines += 2
 }
 
-// render updates just the dynamic parts
+// render updates the display with scrolling
 func (ld *LiveDisplay) render() {
 	elapsed := time.Since(ld.startTime)
 
@@ -251,26 +259,56 @@ func (ld *LiveDisplay) render() {
 	totalStrums := int(elapsed / timePerStrum)
 	currentStrum := totalStrums % 8 // 0-7
 
+	// Calculate which row the current bar is in
+	currentRow := currentBar / ld.barsPerLine
+
+	// Calculate visible window (keep current bar in the second row if possible)
+	startRow := currentRow - 1
+	if startRow < 0 {
+		startRow = 0
+	}
+	// Don't scroll past the end
+	totalRows := (len(ld.bars) + ld.barsPerLine - 1) / ld.barsPerLine
+	if startRow + visibleRows > totalRows {
+		startRow = totalRows - visibleRows
+		if startRow < 0 {
+			startRow = 0
+		}
+	}
+
 	// Move cursor to start
 	fmt.Print("\033[H")
 
-	// Skip header
+	// Skip header (3 lines: title, separator, empty line)
 	fmt.Print("\033[3B")
 
-	// Render all bar lines with current position
-	for lineStart := 0; lineStart < len(ld.bars); lineStart += ld.barsPerLine {
-		ld.renderBarLine(lineStart, currentBar, currentBeat, currentStrum)
+	// Render visible bar rows
+	for row := 0; row < visibleRows; row++ {
+		lineStart := (startRow + row) * ld.barsPerLine
+		if lineStart < len(ld.bars) {
+			ld.renderBarLine(lineStart, currentBar, currentBeat, currentStrum)
+		} else {
+			// Empty rows (clear them)
+			for i := 0; i < 5; i++ {
+				fmt.Print("\033[2K\n") // Clear line
+			}
+		}
 	}
 
 	// Progress bar
 	fmt.Println()
-	progress := float64(currentBar) / float64(len(ld.bars))
-	if progress > 1.0 {
+	var progress float64
+	if len(ld.bars) > 0 {
+		progress = float64(currentBar) / float64(len(ld.bars))
+	}
+	if progress < 0 {
+		progress = 0
+	} else if progress > 1.0 {
 		progress = 1.0
 	}
 	filledWidth := int(progress * 50)
 	progressBar := strings.Repeat("▓", filledWidth) + strings.Repeat("░", 50-filledWidth)
-	fmt.Printf("  %s  %d%%\n", progressBar, int(progress*100))
+	fmt.Printf("  %s  %d%% (bar %d/%d)\033[K\n", progressBar, int(progress*100), currentBar+1, len(ld.bars))
 }
 
 // ANSI color codes
@@ -292,10 +330,7 @@ func (ld *LiveDisplay) renderBarLine(startBar int, currentBar int, currentBeat i
 
 	barWidth := 31 // Width for each bar content
 
-	// Check if this line contains the current bar
-	isCurrentLine := currentBar >= startBar && currentBar < endBar
-
-	// Line 1: Chord names with bar numbers
+	// Line 1: Chord names
 	fmt.Print("  ")
 	for i := startBar; i < endBar; i++ {
 		if i < len(ld.bars) {
@@ -307,9 +342,9 @@ func (ld *LiveDisplay) renderBarLine(startBar int, currentBar int, currentBeat i
 			}
 		}
 	}
-	fmt.Printf("%d-%d\n", startBar+1, endBar)
+	fmt.Println()
 
-	// Line 2: Lyrics
+	// Line 2: Lyrics (always render to maintain consistent row height)
 	fmt.Print("  ")
 	for i := startBar; i < endBar; i++ {
 		if i < len(ld.bars) {
@@ -318,7 +353,7 @@ func (ld *LiveDisplay) renderBarLine(startBar int, currentBar int, currentBeat i
 				lyrics = lyrics[:barWidth]
 			}
 			padded := fmt.Sprintf("%-*s", barWidth, lyrics)
-			if i == currentBar {
+			if i == currentBar && lyrics != "" {
 				fmt.Printf("%s%s%s%s  ", colorBold, colorYellow, padded, colorReset)
 			} else {
 				fmt.Printf("%s  ", padded)
@@ -341,7 +376,7 @@ func (ld *LiveDisplay) renderBarLine(startBar int, currentBar int, currentBeat i
 	}
 	fmt.Println()
 
-	// Line 4: Beat numbers with current line marker
+	// Line 4: Beat numbers
 	fmt.Print("  ")
 	for i := startBar; i < endBar; i++ {
 		if i < len(ld.bars) {
@@ -352,9 +387,6 @@ func (ld *LiveDisplay) renderBarLine(startBar int, currentBar int, currentBeat i
 				fmt.Printf("%s%s%s  ", colorDim, beatDisplay, colorReset)
 			}
 		}
-	}
-	if isCurrentLine {
-		fmt.Printf("%s◄───%s", colorCyan, colorReset)
 	}
 	fmt.Println()
 
@@ -430,13 +462,14 @@ func (ld *LiveDisplay) formatStrumPattern(isCurrentBar bool, currentStrum int, w
 		}
 	}
 
-	// Format with spacing
-	display := strings.Join(result, "   ")
+	// Format with spacing: 8 symbols with 3 spaces between = 30 chars
+	// Add 1 space prefix to help center in width 31
+	display := " " + strings.Join(result, "   ")
 
-	// Center in width
-	if len(display) < width {
-		padding := (width - len(display)) / 2
-		display = strings.Repeat(" ", padding) + display + strings.Repeat(" ", width-padding-len(display))
+	// Pad to exact width (use rune count for Unicode)
+	runeCount := utf8.RuneCountInString(display)
+	if runeCount < width {
+		display = display + strings.Repeat(" ", width-runeCount)
 	}
 
 	return display
@@ -463,13 +496,16 @@ func (ld *LiveDisplay) formatBeatNumbers(isCurrentBar bool, currentBeat int, wid
 		}
 	}
 
-	// Format with spacing to match strum pattern (8 positions = 4 beats * 2)
-	display := fmt.Sprintf("%s       %s       %s       %s", result[0], result[1], result[2], result[3])
+	// Format with spacing to match strum pattern exactly
+	// Strum: " x   x   x   x   x   x   x   x" (1 space prefix + 8 symbols with 3 spaces)
+	// Beats align with strums 0, 2, 4, 6 at positions 1, 9, 17, 25
+	// So: 1 space prefix, then 7 spaces between each beat number
+	display := fmt.Sprintf(" %s       %s       %s       %s", result[0], result[1], result[2], result[3])
 
-	// Center in width
-	if len(display) < width {
-		padding := (width - len(display)) / 2
-		display = strings.Repeat(" ", padding) + display + strings.Repeat(" ", width-padding-len(display))
+	// Pad to exact width (use rune count for Unicode symbols like ●)
+	runeCount := utf8.RuneCountInString(display)
+	if runeCount < width {
+		display = display + strings.Repeat(" ", width-runeCount)
 	}
 
 	return display
