@@ -1,0 +1,31 @@
+# Boogie Blues - John Lee Hooker style
+# Hypnotic one-chord vamp, foot-stomping groove
+
+track:
+  title: "Boogie Blues in E"
+  key: E
+  tempo: 108
+  time_signature: 4/4
+  style: boogie blues
+
+chord_progression:
+  # Hooker-style: mostly one chord, hypnotic vamp
+  # Stays on E7 for long stretches, brief A7 visits
+  pattern: "E7 E7 E7 E7 E7 E7 E7 E7 A7 A7 E7 E7 E7 E7 E7 E7"
+  bars_per_chord: 1
+  repeat: 3
+
+rhythm:
+  # Driving boogie pattern - relentless
+  pattern: "D.D.D.D."
+  swing: 0.5
+
+bass:
+  # Simple root, stomping feel
+  style: root
+  swing: 0.5
+
+drums:
+  # Just kick drum - foot stomp feel
+  style: kick_only
+  intensity: 0.6

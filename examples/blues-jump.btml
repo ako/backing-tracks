@@ -1,0 +1,30 @@
+# Jump Blues - Uptempo swing style
+# Proto-rock'n'roll energy (Louis Jordan, Big Joe Turner)
+
+track:
+  title: "Jump Blues in C"
+  key: C
+  tempo: 168
+  time_signature: 4/4
+  style: jump blues
+
+chord_progression:
+  # 12-bar blues, fast changes
+  pattern: "C7 C7 C7 C7 F7 F7 C7 C7 G7 F7 C7 G7"
+  bars_per_chord: 1
+  repeat: 3
+
+rhythm:
+  # Driving quarter note swing
+  pattern: "D.D.D.D."
+  swing: 0.58
+
+bass:
+  # Bouncy walking bass
+  style: walking
+  swing: 0.58
+
+drums:
+  # Driving swing beat
+  style: jazz_swing
+  intensity: 0.8

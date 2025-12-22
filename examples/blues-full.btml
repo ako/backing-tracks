@@ -28,3 +28,8 @@ bass:
 drums:
   style: shuffle
   intensity: 0.7
+
+melody:
+  enabled: true
+  style: simple
+  density: 0.5

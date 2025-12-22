@@ -1,0 +1,30 @@
+# West Coast Blues - Jazzy, sophisticated
+# Smooth, cool tone (Charles Brown, T-Bone Walker)
+
+track:
+  title: "West Coast Blues in F"
+  key: F
+  tempo: 96
+  time_signature: 4/4
+  style: west coast blues
+
+chord_progression:
+  # Jazz-influenced changes with 9th chords
+  pattern: "Fmaj7 Bb9 Fmaj7 F7 Bb9 Bdim7 Fmaj7 D7 Gm7 C7 Fmaj7 C7"
+  bars_per_chord: 1
+  repeat: 3
+
+rhythm:
+  # Cool, laid-back comping
+  pattern: ".D.U.D.U"
+  swing: 0.55
+
+bass:
+  # Smooth walking jazz bass
+  style: walking
+  swing: 0.55
+
+drums:
+  # Brushes feel
+  style: jazz_swing
+  intensity: 0.4

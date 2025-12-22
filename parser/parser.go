@@ -17,6 +17,8 @@ type Track struct {
 	Bass        *Bass            `yaml:"bass,omitempty"`
 	Drums       *Drums           `yaml:"drums,omitempty"`
 	Lyrics      []string         `yaml:"lyrics,omitempty"` // Lyrics per bar
+	Melody      *Melody          `yaml:"melody,omitempty"` // Auto-generated melody settings
+	Scale       *ScaleConfig     `yaml:"scale,omitempty"`  // Scale override settings
 }
 
 // TrackInfo contains metadata about the track
@@ -163,4 +165,17 @@ type EuclideanRhythm struct {
 	Hits     int `yaml:"hits"`      // Number of hits
 	Steps    int `yaml:"steps"`     // Total steps
 	Rotation int `yaml:"rotation"`  // Rotation offset
+}
+
+// Melody configuration for auto-generated improvisation
+type Melody struct {
+	Enabled bool    `yaml:"enabled"`           // Enable melody generation
+	Style   string  `yaml:"style,omitempty"`   // simple, moderate, active
+	Density float64 `yaml:"density,omitempty"` // 0.0-1.0, how many notes to play
+	Octave  int     `yaml:"octave,omitempty"`  // Base octave (default 4)
+}
+
+// ScaleConfig allows overriding auto-detected scale
+type ScaleConfig struct {
+	Type string `yaml:"type,omitempty"` // pentatonic_minor, blues, dorian, etc.
 }

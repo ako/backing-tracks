@@ -144,11 +144,55 @@ func GenerateFromTrack(track *parser.Track) (string, error) {
 		s.Add(track3)
 	}
 
+	// Track 4: Melody (channel 2)
+	melodyCount := 0
+	if track.Melody != nil && track.Melody.Enabled {
+		var track4 smf.Track
+		// Set program (25 = Steel Guitar)
+		track4.Add(0, midi.ProgramChange(2, 25))
+
+		// Create melody config from track settings
+		melodyConfig := DefaultMelodyConfig()
+		if track.Melody.Style != "" {
+			melodyConfig.Style = MelodyStyleFromString(track.Melody.Style)
+		}
+		if track.Melody.Density > 0 {
+			melodyConfig.Density = track.Melody.Density
+		}
+		if track.Melody.Octave > 0 {
+			melodyConfig.Octave = track.Melody.Octave
+		}
+
+		melodyNotes := GenerateMelody(chords, track.Info.Key, track.Info.Style, melodyConfig, ticksPerBar)
+		melodyCount = len(melodyNotes)
+
+		// Collect melody events with absolute ticks
+		var melodyEvents []midiEvent
+		for _, note := range melodyNotes {
+			melodyEvents = append(melodyEvents, midiEvent{note.Tick, midi.NoteOn(2, note.Note, note.Velocity)})
+			melodyEvents = append(melodyEvents, midiEvent{note.Tick + note.Duration, midi.NoteOff(2, note.Note)})
+		}
+		sort.Slice(melodyEvents, func(i, j int) bool {
+			return melodyEvents[i].tick < melodyEvents[j].tick
+		})
+
+		// Add with delta times
+		prevTick := uint32(0)
+		for _, evt := range melodyEvents {
+			delta := evt.tick - prevTick
+			track4.Add(delta, evt.message)
+			prevTick = evt.tick
+		}
+
+		track4.Close(0)
+		s.Add(track4)
+	}
+
 	// Debug output
 	chordEventCount := len(chordEvents) / 2 // Divide by 2 since each note has on+off
-	fmt.Printf("\n[MIDI] Generated %d chord events, %d bass notes, %d drum hits\n", chordEventCount, bassCount, drumCount)
-	fmt.Printf("[MIDI] Tracks: %d (tempo + chords + bass + drums)\n", len(s.Tracks))
-	fmt.Printf("[MIDI] Channels: Chords=0 (Piano), Bass=1 (Fingered Bass), Drums=9 (GM Drums)\n")
+	fmt.Printf("\n[MIDI] Generated %d chord events, %d bass notes, %d drum hits, %d melody notes\n", chordEventCount, bassCount, drumCount, melodyCount)
+	fmt.Printf("[MIDI] Tracks: %d\n", len(s.Tracks))
+	fmt.Printf("[MIDI] Channels: Chords=0 (Piano), Bass=1 (Fingered Bass), Melody=2 (Steel Guitar), Drums=9 (GM Drums)\n")
 	fmt.Printf("[MIDI] Total duration: %d ticks (%d bars)\n", currentTick, currentTick/ticksPerBar)
 
 	// Write to file

@@ -1,0 +1,30 @@
+# Texas Blues - Clean, jazzy style
+# Smooth tone, swing feel (T-Bone Walker, Stevie Ray Vaughan)
+
+track:
+  title: "Texas Shuffle in G"
+  key: G
+  tempo: 126
+  time_signature: 4/4
+  style: texas blues
+
+chord_progression:
+  # 12-bar with jazzy dominant 9ths
+  pattern: "G9 G9 G9 G9 C9 C9 G9 G9 D9 C9 G9 D9"
+  bars_per_chord: 1
+  repeat: 3
+
+rhythm:
+  # Smooth shuffle strum
+  pattern: "D.DU.UDU"
+  swing: 0.6
+
+bass:
+  # Swinging walking bass
+  style: walking
+  swing: 0.6
+
+drums:
+  # Crisp shuffle
+  style: shuffle
+  intensity: 0.6

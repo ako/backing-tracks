@@ -1,0 +1,30 @@
+# Chicago Blues - Electric urban style
+# Full band, shuffle feel (Muddy Waters, Howlin' Wolf)
+
+track:
+  title: "Chicago Shuffle in A"
+  key: A
+  tempo: 116
+  time_signature: 4/4
+  style: chicago blues
+
+chord_progression:
+  # Standard 12-bar with turnaround
+  pattern: "A7 A7 A7 A7 D7 D7 A7 A7 E7 D7 A7 E7"
+  bars_per_chord: 1
+  repeat: 3
+
+rhythm:
+  # Classic shuffle comping
+  pattern: ".D.D.D.U"
+  swing: 0.67
+
+bass:
+  # Walking shuffle bass
+  style: swing_walking
+  swing: 0.67
+
+drums:
+  # Shuffle with ride cymbal
+  style: shuffle
+  intensity: 0.7

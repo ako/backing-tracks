@@ -1,0 +1,30 @@
+# Slow Blues - Soul/torch style
+# Emotional, expressive (B.B. King, Albert King)
+
+track:
+  title: "Slow Blues in Bb"
+  key: Bb
+  tempo: 58
+  time_signature: 4/4
+  style: slow blues
+
+chord_progression:
+  # 12-bar with major IV chord for soul feel
+  pattern: "Bb7 Bb7 Bb7 Bb7 Eb7 Eb7 Bb7 Bb7 F7 Eb7 Bb7 F7"
+  bars_per_chord: 1
+  repeat: 3
+
+rhythm:
+  # Triplet feel, emotional swells
+  pattern: "D..U..D."
+  swing: 0.67
+
+bass:
+  # Deep, slow walking
+  style: swing_walking
+  swing: 0.67
+
+drums:
+  # Sparse, felt shuffle
+  style: shuffle
+  intensity: 0.35

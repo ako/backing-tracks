@@ -7,6 +7,7 @@ import (
 	"unicode/utf8"
 
 	"backing-tracks/parser"
+	"backing-tracks/theory"
 )
 
 // LiveDisplay shows real-time karaoke-style playback information
@@ -21,6 +22,11 @@ type LiveDisplay struct {
 	strumPattern  string
 	barsPerLine   int
 	displayLines  int
+	fretboard     *FretboardDisplay
+	currentScale  *theory.Scale
+	showFretboard bool
+	chordChart    *ChordChart
+	currentChord  string
 }
 
 // Bar represents a single bar with its chords and lyrics
@@ -48,16 +54,37 @@ func NewLiveDisplay(track *parser.Track) *LiveDisplay {
 	// Process chords into bars
 	bars := processChordsIntoBars(track)
 
+	// Initialize scale based on track style
+	scale := theory.GetScaleForStyle(track.Info.Key, track.Info.Style, "")
+
+	// Create fretboard display (15 frets, compact mode for now)
+	fretboard := NewFretboardDisplay(scale, 15)
+	fretboard.SetCompactMode(true) // Use compact mode to fit alongside chord display
+
+	// Create chord chart
+	chordChart := NewChordChart()
+
+	// Get initial chord
+	initialChord := ""
+	if len(bars) > 0 && len(bars[0].Chords) > 0 {
+		initialChord = bars[0].Chords[0].Symbol
+	}
+
 	return &LiveDisplay{
-		track:        track,
-		chords:       track.Progression.GetChords(),
-		bars:         bars,
-		tempo:        track.Info.Tempo,
-		timePerBeat:  timePerBeat,
-		stopChan:     make(chan bool),
-		strumPattern: strumPattern,
-		barsPerLine:  2, // 2 bars per line for karaoke style (more readable)
-		displayLines: 0,
+		track:         track,
+		chords:        track.Progression.GetChords(),
+		bars:          bars,
+		tempo:         track.Info.Tempo,
+		timePerBeat:   timePerBeat,
+		stopChan:      make(chan bool),
+		strumPattern:  strumPattern,
+		barsPerLine:   2, // 2 bars per line for karaoke style (more readable)
+		displayLines:  0,
+		fretboard:     fretboard,
+		currentScale:  scale,
+		showFretboard: true,
+		chordChart:    chordChart,
+		currentChord:  initialChord,
 	}
 }
 
@@ -218,20 +245,45 @@ func (ld *LiveDisplay) renderFull() {
 	// Clear screen
 	fmt.Print("\033[2J\033[H")
 
-	// Render header
+	// Render header with scale info
 	fmt.Printf("  %s", ld.track.Info.Title)
-	fmt.Printf("%s%s | %d BPM\n",
-		strings.Repeat(" ", 50-len(ld.track.Info.Title)),
+	titlePad := 50 - len(ld.track.Info.Title)
+	if titlePad < 1 {
+		titlePad = 1
+	}
+	fmt.Printf("%s%s | %d BPM",
+		strings.Repeat(" ", titlePad),
 		ld.track.Info.Key,
 		ld.track.Info.Tempo)
+
+	// Add scale name to header if fretboard is shown
+	if ld.showFretboard && ld.currentScale != nil {
+		fmt.Printf("  │  Scale: %s", ld.currentScale.Name)
+	}
+	fmt.Println()
+
 	fmt.Println("  " + strings.Repeat("═", 66))
 	fmt.Println()
 
-	// Render first few rows
+	// Render first few rows with fretboard and chord chart on right
+	fretLines := []string{}
+	if ld.showFretboard && ld.fretboard != nil {
+		fretLines = ld.fretboard.Render()
+	}
+
+	// Get chord chart lines for initial chord
+	chordLines := []string{}
+	if ld.chordChart != nil && ld.currentChord != "" {
+		chordLines = ld.chordChart.RenderHorizontal(ld.currentChord)
+	}
+
+	// Combine fretboard and chord chart
+	rightPanelLines := append(fretLines, chordLines...)
+
 	for row := 0; row < visibleRows; row++ {
 		lineStart := row * ld.barsPerLine
 		if lineStart < len(ld.bars) {
-			ld.renderBarLine(lineStart, -1, -1, -1)
+			ld.renderBarLineWithFretboard(lineStart, -1, -1, -1, rightPanelLines, row)
 		} else {
 			// Empty rows
 			for i := 0; i < 5; i++ {
@@ -276,17 +328,47 @@ func (ld *LiveDisplay) render() {
 		}
 	}
 
+	// Update scale and current chord if changed
+	if currentBar < len(ld.bars) && len(ld.bars[currentBar].Chords) > 0 {
+		newChord := ld.bars[currentBar].Chords[0].Symbol
+		if newChord != ld.currentChord {
+			ld.currentChord = newChord
+		}
+		if strings.Contains(strings.ToLower(ld.track.Info.Style), "jazz") {
+			newScale := theory.GetScaleForStyle(ld.track.Info.Key, ld.track.Info.Style, newChord)
+			if newScale.Name != ld.currentScale.Name {
+				ld.currentScale = newScale
+				ld.fretboard.SetScale(newScale)
+			}
+		}
+	}
+
+	// Get fretboard lines
+	fretLines := []string{}
+	if ld.showFretboard && ld.fretboard != nil {
+		fretLines = ld.fretboard.Render()
+	}
+
+	// Get chord chart lines for current chord
+	chordLines := []string{}
+	if ld.chordChart != nil && ld.currentChord != "" {
+		chordLines = ld.chordChart.RenderHorizontal(ld.currentChord)
+	}
+
+	// Combine fretboard and chord chart
+	rightPanelLines := append(fretLines, chordLines...)
+
 	// Move cursor to start
 	fmt.Print("\033[H")
 
 	// Skip header (3 lines: title, separator, empty line)
 	fmt.Print("\033[3B")
 
-	// Render visible bar rows
+	// Render visible bar rows with fretboard and chord chart
 	for row := 0; row < visibleRows; row++ {
 		lineStart := (startRow + row) * ld.barsPerLine
 		if lineStart < len(ld.bars) {
-			ld.renderBarLine(lineStart, currentBar, currentBeat, currentStrum)
+			ld.renderBarLineWithFretboard(lineStart, currentBar, currentBeat, currentStrum, rightPanelLines, row)
 		} else {
 			// Empty rows (clear them)
 			for i := 0; i < 5; i++ {
@@ -509,4 +591,124 @@ func (ld *LiveDisplay) formatBeatNumbers(isCurrentBar bool, currentBeat int, wid
 	}
 
 	return display
+}
+
+// renderBarLineWithFretboard renders a bar line with fretboard on the right
+func (ld *LiveDisplay) renderBarLineWithFretboard(startBar int, currentBar int, currentBeat int, currentStrum int, fretLines []string, rowIndex int) {
+	endBar := startBar + ld.barsPerLine
+	if endBar > len(ld.bars) {
+		endBar = len(ld.bars)
+	}
+
+	barWidth := 31 // Width for each bar content
+	leftWidth := (barWidth + 2) * ld.barsPerLine + 2 // Total left side width
+
+	// Calculate which fretboard lines to show for this row
+	// Each bar row is 5 lines, fretboard has about 10 lines
+	// Show fretboard lines spread across the rows
+	fretStartLine := rowIndex * 5
+	if fretStartLine >= len(fretLines) {
+		fretStartLine = 0
+	}
+
+	// Line 1: Chord names
+	fmt.Print("  ")
+	for i := startBar; i < endBar; i++ {
+		if i < len(ld.bars) {
+			chordStr := ld.formatBarChords(ld.bars[i], barWidth)
+			if i == currentBar {
+				fmt.Printf("%s%s%s%s  ", colorBold, colorCyan, chordStr, colorReset)
+			} else {
+				fmt.Printf("%s  ", chordStr)
+			}
+		}
+	}
+	// Add fretboard line on right
+	if ld.showFretboard && fretStartLine < len(fretLines) {
+		padNeeded := leftWidth - (barWidth+2)*(endBar-startBar) - 2
+		if padNeeded > 0 {
+			fmt.Print(strings.Repeat(" ", padNeeded))
+		}
+		fmt.Printf("    │  %s", fretLines[fretStartLine])
+	}
+	fmt.Print("\033[K\n")
+
+	// Line 2: Lyrics
+	fmt.Print("  ")
+	for i := startBar; i < endBar; i++ {
+		if i < len(ld.bars) {
+			lyrics := ld.bars[i].Lyrics
+			if len(lyrics) > barWidth {
+				lyrics = lyrics[:barWidth]
+			}
+			padded := fmt.Sprintf("%-*s", barWidth, lyrics)
+			if i == currentBar && lyrics != "" {
+				fmt.Printf("%s%s%s%s  ", colorBold, colorYellow, padded, colorReset)
+			} else {
+				fmt.Printf("%s  ", padded)
+			}
+		}
+	}
+	// Add fretboard line on right
+	if ld.showFretboard && fretStartLine+1 < len(fretLines) {
+		padNeeded := leftWidth - (barWidth+2)*(endBar-startBar) - 2
+		if padNeeded > 0 {
+			fmt.Print(strings.Repeat(" ", padNeeded))
+		}
+		fmt.Printf("    │  %s", fretLines[fretStartLine+1])
+	}
+	fmt.Print("\033[K\n")
+
+	// Line 3: Strum pattern
+	fmt.Print("  ")
+	for i := startBar; i < endBar; i++ {
+		if i < len(ld.bars) {
+			strumDisplay := ld.formatStrumPattern(i == currentBar, currentStrum, barWidth)
+			if i == currentBar {
+				fmt.Printf("%s%s%s  ", colorGreen, strumDisplay, colorReset)
+			} else {
+				fmt.Printf("%s%s%s  ", colorDim, strumDisplay, colorReset)
+			}
+		}
+	}
+	// Add fretboard line on right
+	if ld.showFretboard && fretStartLine+2 < len(fretLines) {
+		padNeeded := leftWidth - (barWidth+2)*(endBar-startBar) - 2
+		if padNeeded > 0 {
+			fmt.Print(strings.Repeat(" ", padNeeded))
+		}
+		fmt.Printf("    │  %s", fretLines[fretStartLine+2])
+	}
+	fmt.Print("\033[K\n")
+
+	// Line 4: Beat numbers
+	fmt.Print("  ")
+	for i := startBar; i < endBar; i++ {
+		if i < len(ld.bars) {
+			beatDisplay := ld.formatBeatNumbers(i == currentBar, currentBeat, barWidth)
+			if i == currentBar {
+				fmt.Printf("%s%s%s  ", colorGreen, beatDisplay, colorReset)
+			} else {
+				fmt.Printf("%s%s%s  ", colorDim, beatDisplay, colorReset)
+			}
+		}
+	}
+	// Add fretboard line on right
+	if ld.showFretboard && fretStartLine+3 < len(fretLines) {
+		padNeeded := leftWidth - (barWidth+2)*(endBar-startBar) - 2
+		if padNeeded > 0 {
+			fmt.Print(strings.Repeat(" ", padNeeded))
+		}
+		fmt.Printf("    │  %s", fretLines[fretStartLine+3])
+	}
+	fmt.Print("\033[K\n")
+
+	// Line 5: Separator
+	fmt.Print("  ")
+	fmt.Print(strings.Repeat("─", (barWidth+2)*ld.barsPerLine))
+	// Add fretboard line on right
+	if ld.showFretboard && fretStartLine+4 < len(fretLines) {
+		fmt.Printf("    │  %s", fretLines[fretStartLine+4])
+	}
+	fmt.Print("\033[K\n")
 }
