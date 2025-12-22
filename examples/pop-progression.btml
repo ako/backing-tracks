@@ -1,5 +1,7 @@
 # Classic Pop Progression in C
-# I-V-vi-IV progression (very common in pop music)
+# I-V-vi-IV - Simple version with gentle strum
+#
+# Features: folk-style strumming, minimal arrangement
 
 track:
   title: "Pop Progression in C"
@@ -13,3 +15,23 @@ chord_progression:
   pattern: "C G Am F"
   bars_per_chord: 2
   repeat: 4
+
+rhythm:
+  # Simple quarter note strums
+  style: quarter
+  accent: "1,3"
+
+bass:
+  style: root
+
+drums:
+  kick:
+    beats: [1, 3]
+  snare:
+    beats: [2, 4]
+  hihat:
+    euclidean:
+      hits: 8
+      steps: 8
+      rotation: 0
+  intensity: 0.6

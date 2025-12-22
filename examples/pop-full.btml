@@ -1,5 +1,7 @@
 # Pop Progression with Full Band
-# Classic I-V-vi-IV with bass and drums
+# Classic I-V-vi-IV - the most common pop progression
+#
+# Features: up/down strumming, root bass, rock drums
 
 track:
   title: "Pop Progression in C (Full Band)"
@@ -9,12 +11,17 @@ track:
   style: pop
 
 chord_progression:
+  # I-V-vi-IV (used in countless pop songs)
   pattern: "C G Am F"
   bars_per_chord: 2
   repeat: 4
 
+rhythm:
+  # Classic pop strum: down-down-up-up-down-up
+  pattern: "DdUUdUdU"
+
 bass:
-  style: root  # Simple root notes
+  style: root
 
 drums:
   style: rock_beat

@@ -1,5 +1,7 @@
-# Slow Blues in A with Bass and Drums
-# Full backing track with walking bass and shuffle drums
+# Slow Blues in A with Full Band
+# Complete backing track with all features
+#
+# Features: custom strum pattern, swing_walking bass, shuffle drums
 
 track:
   title: "Slow Blues in A (Full Band)"
@@ -13,6 +15,11 @@ chord_progression:
   pattern: "A7 A7 A7 A7 D7 D7 A7 A7 E7 D7 A7 E7"
   bars_per_chord: 1
   repeat: 2
+
+rhythm:
+  # Blues comping pattern - hits on the and's
+  pattern: ".D.D.D.U"
+  swing: 0.6
 
 bass:
   style: swing_walking

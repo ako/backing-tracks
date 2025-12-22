@@ -1,5 +1,7 @@
 # Jazz II-V-I with Swing Feel
-# Classic jazz progression with walking bass and swing drums
+# Classic jazz progression with comping rhythm
+#
+# Features: jazz comping pattern, walking bass, jazz_swing drums
 
 track:
   title: "II-V-I in Bb"
@@ -9,13 +11,20 @@ track:
   style: jazz
 
 chord_progression:
+  # Classic II-V-I turnaround
   pattern: "Cm7 F7 Bbmaj7 Bbmaj7"
   bars_per_chord: 2
   repeat: 4
 
+rhythm:
+  # Jazz comping - Charleston rhythm with variations
+  # Hits on 1, and-of-2, 4
+  pattern: "D..Ud..U"
+  swing: 0.67            # Triplet swing
+
 bass:
   style: walking
-  swing: 0.67  # Triplet swing feel
+  swing: 0.67
 
 drums:
   style: jazz_swing

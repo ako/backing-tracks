@@ -1,5 +1,7 @@
 # Slow Blues in A - 12 Bar Blues
-# A simple blues progression for testing the PoC
+# A simple blues progression - great for beginners
+#
+# Features: shuffle rhythm, blues_shuffle drums, walking bass
 
 track:
   title: "Slow Blues in A"
@@ -13,3 +15,15 @@ chord_progression:
   pattern: "A7 A7 A7 A7 D7 D7 A7 A7 E7 D7 A7 E7"
   bars_per_chord: 1
   repeat: 2
+
+rhythm:
+  style: shuffle_strum   # Triplet shuffle feel
+  swing: 0.67            # Classic blues swing
+
+bass:
+  style: walking
+  swing: 0.67
+
+drums:
+  style: blues_shuffle
+  intensity: 0.7

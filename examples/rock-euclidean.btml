@@ -1,5 +1,7 @@
 # Rock Track with Euclidean Drum Patterns
-# Demonstrates custom Euclidean rhythm patterns
+# Power chord progression with algorithmic drums
+#
+# Features: power chord strum, Euclidean rhythms, aggressive feel
 
 track:
   title: "Rock Jam in E"
@@ -9,28 +11,33 @@ track:
   style: rock
 
 chord_progression:
+  # Power chord progression
   pattern: "E5 E5 G5 A5 E5 E5 C5 D5"
   bars_per_chord: 2
   repeat: 2
+
+rhythm:
+  # Heavy rock strum - all downstrokes with palm mutes
+  pattern: "DxDxDxDx"
 
 bass:
   style: root_fifth
 
 drums:
-  # Custom Euclidean patterns instead of presets
+  # Custom Euclidean patterns for interesting groove
   kick:
     euclidean:
-      hits: 5
+      hits: 5        # 5 hits spread over 8 steps
       steps: 8
       rotation: 0
   snare:
     euclidean:
-      hits: 3
+      hits: 3        # Sparse snare
       steps: 8
-      rotation: 2
+      rotation: 2    # Offset from kick
   hihat:
     euclidean:
-      hits: 7
+      hits: 7        # Almost constant hi-hat
       steps: 8
       rotation: 0
-  intensity: 0.85
+  intensity: 0.85    # Loud and proud
