@@ -1,0 +1,23 @@
+# Spanish Romance Style
+# Descending arpeggios with flamenco flavor
+# Style: Classical Spanish guitar
+
+track:
+  title: "Spanish Romance"
+  key: Em
+  tempo: 66
+  time_signature: 4/4
+  style: classical
+
+chord_progression:
+  # Andalusian cadence and Spanish progressions
+  pattern: "Em Em Em Em Am Am Am Am B7 B7 B7 B7 Em Em Em Em"
+  bars_per_chord: 1
+  repeat: 2
+
+rhythm:
+  style: arpeggio_down
+
+bass:
+  style: root
+  swing: 0.5

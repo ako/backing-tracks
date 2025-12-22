@@ -1,0 +1,28 @@
+# Classical Arpeggio
+# Flowing ascending arpeggios
+# Style: Classical guitar, Baroque-influenced
+
+track:
+  title: "Classical Arpeggio"
+  key: Em
+  tempo: 72
+  time_signature: 4/4
+  style: classical
+
+chord_progression:
+  # Classical-inspired progression with suspensions
+  pattern: "Em Em Am Am D D G G C C Am Am B7 B7 Em Em"
+  bars_per_chord: 1
+  repeat: 2
+
+rhythm:
+  style: arpeggio_up
+
+bass:
+  style: root
+  swing: 0.5
+
+melody:
+  enabled: true
+  style: simple
+  density: 0.4

@@ -1,0 +1,34 @@
+# Rock and Roll Piano
+# High-energy 50s rock and roll style
+# Style: Jerry Lee Lewis, Little Richard, Fats Domino
+
+track:
+  title: "Rock and Roll Piano"
+  key: C
+  tempo: 168
+  time_signature: 4/4
+  style: rock
+
+chord_progression:
+  # Classic 12-bar rock and roll
+  pattern: "C C C C F F C C G F C G"
+  bars_per_chord: 1
+  repeat: 3
+
+rhythm:
+  # Pounding eighth notes
+  style: eighth
+  accent: "1,3"
+
+bass:
+  # Driving boogie bass
+  style: boogie
+
+drums:
+  style: rock_beat
+  intensity: 0.9
+
+melody:
+  enabled: true
+  style: active
+  density: 0.8

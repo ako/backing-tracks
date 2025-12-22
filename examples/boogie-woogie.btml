@@ -1,0 +1,33 @@
+# Boogie Woogie in C
+# Driving piano boogie with rolling bass
+# Style: Meade Lux Lewis, Albert Ammons, Pete Johnson
+
+track:
+  title: "Boogie Woogie"
+  key: C
+  tempo: 132
+  time_signature: 4/4
+  style: boogie blues
+
+chord_progression:
+  # 12-bar blues
+  pattern: "C7 C7 C7 C7 F7 F7 C7 C7 G7 F7 C7 G7"
+  bars_per_chord: 1
+  repeat: 2
+
+rhythm:
+  # Driving eighth note stabs
+  style: eighth
+
+bass:
+  # Rolling boogie bass pattern
+  style: boogie
+
+drums:
+  style: shuffle
+  intensity: 0.7
+
+melody:
+  enabled: true
+  style: active
+  density: 0.7

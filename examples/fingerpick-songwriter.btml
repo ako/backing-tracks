@@ -1,0 +1,28 @@
+# Singer-Songwriter Fingerpicking
+# Intimate acoustic accompaniment
+# Style: Joni Mitchell, John Mayer, Damien Rice
+
+track:
+  title: "Singer-Songwriter"
+  key: D
+  tempo: 78
+  time_signature: 4/4
+  style: folk
+
+chord_progression:
+  # Open chord progression with extensions
+  pattern: "D Dmaj7 G A D Dmaj7 Bm A G G A A D Dmaj7 G A"
+  bars_per_chord: 1
+  repeat: 2
+
+rhythm:
+  style: fingerpick
+
+bass:
+  style: root_fifth
+  swing: 0.5
+
+melody:
+  enabled: true
+  style: simple
+  density: 0.35

@@ -1,0 +1,28 @@
+# Slow Ballad Fingerpicking
+# Sparse, emotional fingerstyle
+# Style: Leonard Cohen, Jeff Buckley, Elliott Smith
+
+track:
+  title: "Slow Ballad"
+  key: Am
+  tempo: 62
+  time_signature: 4/4
+  style: ballad
+
+chord_progression:
+  # Melancholic minor progression
+  pattern: "Am Am F F C C E E Am Am F F C E Am Am"
+  bars_per_chord: 1
+  repeat: 2
+
+rhythm:
+  style: fingerpick_slow
+
+bass:
+  style: root
+  swing: 0.5
+
+melody:
+  enabled: true
+  style: simple
+  density: 0.3

@@ -1,0 +1,24 @@
+# Travis Picking in G
+# Classic country/folk alternating bass pattern
+# Style: Merle Travis, Chet Atkins, Tommy Emmanuel
+
+track:
+  title: "Travis Picking in G"
+  key: G
+  tempo: 96
+  time_signature: 4/4
+  style: folk
+
+chord_progression:
+  pattern: "G G C C G G D D G G C C G D G G"
+  bars_per_chord: 1
+  repeat: 2
+
+rhythm:
+  style: travis
+
+bass:
+  style: root_fifth
+  swing: 0.5
+
+# No drums - pure fingerstyle

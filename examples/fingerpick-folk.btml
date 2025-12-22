@@ -1,0 +1,25 @@
+# Folk Fingerpicking
+# Classic folk pattern with rolling arpeggios
+# Style: James Taylor, Nick Drake, Paul Simon
+
+track:
+  title: "Folk Fingerpicking"
+  key: C
+  tempo: 88
+  time_signature: 4/4
+  style: folk
+
+chord_progression:
+  # Common folk progression with some color chords
+  pattern: "C Am F G C Am Dm G C Em Am Am F Fm C G C C"
+  bars_per_chord: 1
+  repeat: 2
+
+rhythm:
+  style: fingerpick
+
+bass:
+  style: root
+  swing: 0.5
+
+# No drums - acoustic intimacy

@@ -238,6 +238,63 @@ func generateRhythmPattern(style string, notes ChordVoicing, startTick, duration
 			}
 		}
 
+	case "stride":
+		// Stride/ragtime: chords only on beats 2 & 4 (the "pah" in "oom-pah")
+		// Pairs with stride bass style which plays bass on 1 & 3
+		numBeats := int(duration / quarterNote)
+		if numBeats == 0 {
+			numBeats = 1
+		}
+		for i := 0; i < numBeats; i++ {
+			tick := startTick + uint32(i)*quarterNote
+			beat := (i % 4) + 1
+			if beat == 2 || beat == 4 {
+				// Chord stab on backbeats
+				vel := uint8(75)
+				if beat == 2 {
+					vel = 80 // Slightly accent beat 2
+				}
+				// Quick strum for that percussive ragtime feel
+				strumDelay := uint32(8)
+				for j, note := range notes {
+					noteTick := tick + uint32(j)*strumDelay
+					events = append(events, midiEvent{noteTick, midi.NoteOn(0, note, vel)})
+					events = append(events, midiEvent{tick + quarterNote - 50, midi.NoteOff(0, note)})
+				}
+			}
+		}
+
+	case "ragtime":
+		// Ragtime with syncopated accents: similar to stride but with some anticipation
+		numBeats := int(duration / quarterNote)
+		if numBeats == 0 {
+			numBeats = 1
+		}
+		anticipation := uint32(eighthNote / 2) // 16th note anticipation
+		for i := 0; i < numBeats; i++ {
+			tick := startTick + uint32(i)*quarterNote
+			beat := (i % 4) + 1
+			if beat == 2 || beat == 4 {
+				// Main chord on backbeats
+				vel := uint8(78)
+				strumDelay := uint32(8)
+				for j, note := range notes {
+					noteTick := tick + uint32(j)*strumDelay
+					events = append(events, midiEvent{noteTick, midi.NoteOn(0, note, vel)})
+					events = append(events, midiEvent{tick + quarterNote - 50, midi.NoteOff(0, note)})
+				}
+			} else if beat == 1 {
+				// Occasional syncopated anticipation before beat 2
+				if i+1 < numBeats {
+					syncopTick := tick + quarterNote - anticipation
+					for _, note := range notes {
+						events = append(events, midiEvent{syncopTick, midi.NoteOn(0, note, 65)})
+						events = append(events, midiEvent{syncopTick + anticipation - 10, midi.NoteOff(0, note)})
+					}
+				}
+			}
+		}
+
 	case "travis":
 		// Travis picking: alternating bass with finger melody
 		// Pattern: Bass-high-mid-high (thumb-index-middle-index)

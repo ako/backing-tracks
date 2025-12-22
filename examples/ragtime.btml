@@ -1,0 +1,29 @@
+# Ragtime in C
+# Classic stride piano style - "oom-pah" pattern
+# Style: Scott Joplin, Jelly Roll Morton
+
+track:
+  title: "Ragtime Stride"
+  key: C
+  tempo: 108
+  time_signature: 4/4
+  style: ragtime
+
+chord_progression:
+  # Classic ragtime progression with chromatic movement
+  pattern: "C C C C F F C C G7 G7 C G7 C C F Fm C G7 C C"
+  bars_per_chord: 1
+  repeat: 2
+
+rhythm:
+  # Stride: chords on beats 2 & 4
+  style: stride
+
+bass:
+  # Stride bass: low notes on beats 1 & 3
+  style: stride
+
+melody:
+  enabled: true
+  style: active
+  density: 0.6

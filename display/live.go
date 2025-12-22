@@ -175,6 +175,10 @@ func getStrumPattern(rhythm *parser.Rhythm) string {
 		return "↓ . . . ↓ . . ."
 	case "arpeggio_up", "arpeggio_down":
 		return "↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓"
+	case "stride":
+		return ". . ↓ . . . ↓ ."
+	case "ragtime":
+		return ". ↓ ↓ . . ↓ ↓ ."
 	default:
 		return "↓ . ↑ . ↓ . ↑ ."
 	}

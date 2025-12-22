@@ -118,6 +118,52 @@ func GenerateBassLine(chords []parser.Chord, bass *parser.Bass, ticksPerBar uint
 				})
 			}
 
+		case "stride":
+			// Stride bass for ragtime/stride piano: low bass on 1 & 3
+			// The "oom" in "oom-pah" - pairs with stride rhythm style for chords on 2 & 4
+			quarterNote := ticksPerBar / 4
+			fifth := root + 7
+
+			// Beat 1: Root (low octave)
+			notes = append(notes, BassNote{
+				Note:     root + 28, // Low bass octave
+				Tick:     currentTick,
+				Duration: quarterNote - 20,
+				Velocity: 95,
+			})
+			// Beat 3: Fifth (low octave)
+			notes = append(notes, BassNote{
+				Note:     fifth + 28, // Low bass octave
+				Tick:     currentTick + quarterNote*2,
+				Duration: quarterNote - 20,
+				Velocity: 90,
+			})
+
+		case "boogie":
+			// Boogie-woogie bass: driving eighth note pattern
+			eighthNote := ticksPerBar / 8
+
+			// Classic boogie pattern: 1-1-5-6-b7-6-5-5
+			boogiePattern := []uint8{
+				root + 36,      // 1
+				root + 36,      // 1
+				root + 36 + 7,  // 5
+				root + 36 + 9,  // 6
+				root + 36 + 10, // b7
+				root + 36 + 9,  // 6
+				root + 36 + 7,  // 5
+				root + 36 + 7,  // 5
+			}
+
+			for i, note := range boogiePattern {
+				notes = append(notes, BassNote{
+					Note:     note,
+					Tick:     currentTick + uint32(i)*eighthNote,
+					Duration: eighthNote - 15,
+					Velocity: uint8(85 + (i%2)*5), // Slight accent on downbeats
+				})
+			}
+
 		default:
 			// Default to simple root notes
 			notes = append(notes, BassNote{
