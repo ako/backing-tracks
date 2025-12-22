@@ -1,0 +1,36 @@
+# Blues Vocal Style
+# Classic AAB 12-bar blues with call-and-response melody
+# The melody follows the traditional vocal phrasing pattern
+
+track:
+  title: "12-Bar Blues (Vocal Style)"
+  key: A
+  tempo: 72
+  time_signature: 4/4
+  style: blues
+
+chord_progression:
+  # Standard 12-bar blues in A
+  pattern: "A7 A7 A7 A7 D7 D7 A7 A7 E7 D7 A7 E7"
+  bars_per_chord: 1
+  repeat: 2
+
+rhythm:
+  style: shuffle_strum
+  swing: 0.6
+
+bass:
+  style: swing_walking
+  swing: 0.6
+
+drums:
+  style: shuffle
+  intensity: 0.6
+
+melody:
+  enabled: true
+  style: blues_head    # AAB call-and-response pattern
+  density: 0.7
+
+scale:
+  type: blues

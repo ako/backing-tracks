@@ -192,6 +192,14 @@ func generatePresetPattern(style string, totalBars int, ticksPerBar uint32, velo
 			// Jazz swing ride pattern
 			notes = append(notes, jazzSwing(barStartTick, ticksPerBar, velocity)...)
 
+		case "four_on_floor", "edm":
+			// EDM/House: kick every beat, snare on 2&4, 16th hihats
+			notes = append(notes, fourOnFloor(barStartTick, ticksPerBar, velocity)...)
+
+		case "trap":
+			// Trap: rolling hihats, sparse kick, heavy snare
+			notes = append(notes, trapBeat(barStartTick, ticksPerBar, velocity)...)
+
 		default:
 			// Simple 4/4 beat
 			notes = append(notes, rockBeat(barStartTick, ticksPerBar, velocity)...)
@@ -320,6 +328,97 @@ func bluesShuffle(startTick, ticksPerBar uint32, velocity uint8) []DrumNote {
 			Note:     OpenHihat,
 			Tick:     startTick + (beatStart+2)*tripletEighth,
 			Velocity: velocity - 15,
+		})
+	}
+
+	return notes
+}
+
+// fourOnFloor generates an EDM/House beat with four-on-the-floor kick
+func fourOnFloor(startTick, ticksPerBar uint32, velocity uint8) []DrumNote {
+	notes := []DrumNote{}
+	quarterNote := ticksPerBar / 4
+	sixteenthNote := ticksPerBar / 16
+
+	// Kick: every beat (four on the floor)
+	for beat := 0; beat < 4; beat++ {
+		notes = append(notes, DrumNote{
+			Note:     KickDrum,
+			Tick:     startTick + uint32(beat)*quarterNote,
+			Velocity: velocity + 15,
+		})
+	}
+
+	// Clap/Snare: beats 2 and 4
+	notes = append(notes, DrumNote{Note: SnareDrum, Tick: startTick + quarterNote, Velocity: velocity + 5})
+	notes = append(notes, DrumNote{Note: SnareDrum, Tick: startTick + 3*quarterNote, Velocity: velocity + 5})
+
+	// Hi-hat: 16th notes with accents on offbeats
+	for i := 0; i < 16; i++ {
+		vel := velocity - 25
+		if i%4 == 2 { // Accent on "and" of each beat
+			vel = velocity - 10
+		}
+		if i%2 == 1 { // Offbeat 16ths slightly softer
+			vel -= 5
+		}
+		// Open hihat on certain offbeats for energy
+		hihatNote := uint8(ClosedHihat)
+		if i == 6 || i == 14 { // Open hihat before beats 2 and 4
+			hihatNote = OpenHihat
+			vel = velocity - 15
+		}
+		notes = append(notes, DrumNote{
+			Note:     hihatNote,
+			Tick:     startTick + uint32(i)*sixteenthNote,
+			Velocity: uint8(vel),
+		})
+	}
+
+	return notes
+}
+
+// trapBeat generates a trap-style beat with rolling hihats
+func trapBeat(startTick, ticksPerBar uint32, velocity uint8) []DrumNote {
+	notes := []DrumNote{}
+	quarterNote := ticksPerBar / 4
+	sixteenthNote := ticksPerBar / 16
+	thirtySecondNote := ticksPerBar / 32
+
+	// Kick: sparse, syncopated (1, and of 2, 4)
+	notes = append(notes, DrumNote{Note: KickDrum, Tick: startTick, Velocity: velocity + 20})
+	notes = append(notes, DrumNote{Note: KickDrum, Tick: startTick + quarterNote + quarterNote/2, Velocity: velocity + 15})
+	notes = append(notes, DrumNote{Note: KickDrum, Tick: startTick + 3*quarterNote, Velocity: velocity + 15})
+
+	// Snare: heavy on 2 and 4
+	notes = append(notes, DrumNote{Note: SnareDrum, Tick: startTick + quarterNote, Velocity: velocity + 10})
+	notes = append(notes, DrumNote{Note: SnareDrum, Tick: startTick + 3*quarterNote, Velocity: velocity + 10})
+
+	// Rolling hi-hats: mix of 16ths and 32nds with triplet rolls
+	// Basic 16th pattern with rolls
+	hihatPattern := []struct {
+		offset   uint32
+		velocity int
+	}{
+		{0, 0}, {sixteenthNote, -10}, {2 * sixteenthNote, 0}, {3 * sixteenthNote, -10},
+		{4 * sixteenthNote, 0}, {5 * sixteenthNote, -10}, {6 * sixteenthNote, 0}, {7 * sixteenthNote, -10},
+		{8 * sixteenthNote, 0}, {9 * sixteenthNote, -10}, {10 * sixteenthNote, 0}, {11 * sixteenthNote, -10},
+		// Roll before beat 4
+		{12 * sixteenthNote, 0},
+		{12*sixteenthNote + thirtySecondNote, -15},
+		{13 * sixteenthNote, -5},
+		{13*sixteenthNote + thirtySecondNote, -15},
+		{14 * sixteenthNote, 0},
+		{14*sixteenthNote + thirtySecondNote, -15},
+		{15 * sixteenthNote, -5},
+		{15*sixteenthNote + thirtySecondNote, -20},
+	}
+
+	for _, h := range hihatPattern {
+		notes = append(notes, DrumNote{
+			Note:     ClosedHihat,
+			Tick:     startTick + h.offset,
+			Velocity: uint8(int(velocity) - 20 + h.velocity),
 		})
 	}
 

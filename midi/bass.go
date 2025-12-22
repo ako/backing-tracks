@@ -28,7 +28,7 @@ func GenerateBassLine(chords []parser.Chord, bass *parser.Bass, ticksPerBar uint
 	}
 
 	for _, chord := range chords {
-		root := parseRoot(chord.Symbol)
+		root := parseBassNote(chord.Symbol) // Use bass note for slash chords (Am/G → G)
 		// Support fractional bars by multiplying float first
 		barDuration := uint32(float64(ticksPerBar) * chord.Bars)
 
@@ -161,6 +161,135 @@ func GenerateBassLine(chords []parser.Chord, bass *parser.Bass, ticksPerBar uint
 					Tick:     currentTick + uint32(i)*eighthNote,
 					Duration: eighthNote - 15,
 					Velocity: uint8(85 + (i%2)*5), // Slight accent on downbeats
+				})
+			}
+
+		case "808", "sub":
+			// 808 sub bass: heavy sustained notes with syncopation
+			// Low, long notes that sustain through the bar
+			quarterNote := ticksPerBar / 4
+			eighthNote := ticksPerBar / 8
+
+			// Pattern: hit on 1, and-of-2, 4 (common EDM pattern)
+			notes = append(notes, BassNote{
+				Note:     root + 28, // Very low octave for sub bass
+				Tick:     currentTick,
+				Duration: quarterNote + eighthNote, // Sustain through beat 2
+				Velocity: 110,                      // Heavy!
+			})
+			notes = append(notes, BassNote{
+				Note:     root + 28,
+				Tick:     currentTick + quarterNote + eighthNote, // And of 2
+				Duration: quarterNote,
+				Velocity: 100,
+			})
+			notes = append(notes, BassNote{
+				Note:     root + 28,
+				Tick:     currentTick + 3*quarterNote, // Beat 4
+				Duration: quarterNote - 20,
+				Velocity: 105,
+			})
+
+		case "808_octave", "edm":
+			// EDM bass with octave jumps
+			quarterNote := ticksPerBar / 4
+			eighthNote := ticksPerBar / 8
+
+			// Pattern with octave movement
+			notes = append(notes, BassNote{
+				Note:     root + 28, // Low
+				Tick:     currentTick,
+				Duration: eighthNote,
+				Velocity: 110,
+			})
+			notes = append(notes, BassNote{
+				Note:     root + 40, // High octave
+				Tick:     currentTick + eighthNote,
+				Duration: eighthNote - 10,
+				Velocity: 95,
+			})
+			notes = append(notes, BassNote{
+				Note:     root + 28,
+				Tick:     currentTick + 2*eighthNote,
+				Duration: quarterNote,
+				Velocity: 105,
+			})
+			notes = append(notes, BassNote{
+				Note:     root + 28,
+				Tick:     currentTick + 2*quarterNote,
+				Duration: eighthNote,
+				Velocity: 110,
+			})
+			notes = append(notes, BassNote{
+				Note:     root + 40,
+				Tick:     currentTick + 2*quarterNote + eighthNote,
+				Duration: eighthNote - 10,
+				Velocity: 90,
+			})
+			notes = append(notes, BassNote{
+				Note:     root + 28,
+				Tick:     currentTick + 3*quarterNote,
+				Duration: quarterNote - 20,
+				Velocity: 100,
+			})
+
+		case "funk", "slap":
+			// Funk/slap bass: syncopated 16th note pattern with octaves
+			// Heavy on the ONE, ghost notes, and syncopation
+			sixteenthNote := ticksPerBar / 16
+
+			// Classic funk bass pattern - emphasizes the one, adds octaves and ghost notes
+			// Pattern: ROOT . oct . . r . R . oct . r . . oct .
+			funkBassPattern := []struct {
+				pos      int
+				interval int // 0=root, 12=octave, 7=fifth
+				vel      uint8
+			}{
+				{0, 0, 100},  // 1 - THE ONE
+				{2, 12, 70},  // & - octave (softer)
+				{5, 0, 60},   // 2e - ghost note
+				{6, 0, 90},   // 2& - accent
+				{8, 0, 85},   // 3
+				{10, 12, 70}, // 3& - octave
+				{12, 0, 65},  // 4 - softer
+				{14, 12, 75}, // 4& - octave pickup
+			}
+
+			for _, p := range funkBassPattern {
+				tick := currentTick + uint32(p.pos)*sixteenthNote
+				notes = append(notes, BassNote{
+					Note:     root + 36 + uint8(p.interval),
+					Tick:     tick,
+					Duration: sixteenthNote - 15,
+					Velocity: p.vel,
+				})
+			}
+
+		case "funk_simple":
+			// Simpler funk bass - root and fifth with syncopation
+			sixteenthNote := ticksPerBar / 16
+			fifth := root + 7
+
+			// Simpler pattern: Root on 1, syncopated hits
+			simpleFunk := []struct {
+				pos  int
+				note uint8
+				vel  uint8
+			}{
+				{0, root + 36, 95},   // 1
+				{6, fifth + 36, 80},  // 2&
+				{10, root + 36, 75},  // 3&
+				{12, fifth + 36, 70}, // 4
+				{15, root + 36, 80},  // pickup
+			}
+
+			for _, p := range simpleFunk {
+				tick := currentTick + uint32(p.pos)*sixteenthNote
+				notes = append(notes, BassNote{
+					Note:     p.note,
+					Tick:     tick,
+					Duration: sixteenthNote*2 - 15,
+					Velocity: p.vel,
 				})
 			}
 

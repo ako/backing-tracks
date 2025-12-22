@@ -1,0 +1,37 @@
+# Dark Wave
+# Moody, driving post-punk style
+# The Cure "A Forest" / darker side
+
+track:
+  title: "Dark Wave in Am"
+  key: Am
+  tempo: 120
+  time_signature: 4/4
+  style: rock
+
+chord_progression:
+  # Dark, hypnotic minor progression
+  pattern: "Am Am Am Am F F G G Am Am Am Am F F E E"
+  bars_per_chord: 1
+  repeat: 2
+
+rhythm:
+  # Arpeggiated, hypnotic
+  style: arpeggio_down
+
+bass:
+  # Driving eighth notes
+  style: root_fifth
+
+drums:
+  # Driving post-punk beat
+  style: rock_beat
+  intensity: 0.75
+
+melody:
+  enabled: true
+  style: simple
+  density: 0.3
+
+scale:
+  type: natural_minor

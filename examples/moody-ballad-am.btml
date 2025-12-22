@@ -1,0 +1,37 @@
+# Moody Ballad in Am
+# Sparse, atmospheric 90s soundtrack style
+# Sting/Clapton collaboration feel
+
+track:
+  title: "Moody Ballad in Am"
+  key: Am
+  tempo: 76
+  time_signature: 4/4
+  style: jazz
+
+chord_progression:
+  # Brooding minor progression with jazzy movement
+  pattern: "Am Am/G Fmaj7 E7 Am Am/G Fmaj7 E7 Dm7 Am/E Fmaj7 E7sus4 Am Am/G Fmaj7 E7"
+  bars_per_chord: 1
+  repeat: 2
+
+rhythm:
+  # Sparse arpeggios - atmospheric
+  style: arpeggio_up
+
+bass:
+  # Simple, supportive root notes
+  style: root
+
+drums:
+  # Very sparse - almost brushes feel
+  style: jazz_swing
+  intensity: 0.3
+
+melody:
+  enabled: true
+  style: simple
+  density: 0.3
+
+scale:
+  type: natural_minor

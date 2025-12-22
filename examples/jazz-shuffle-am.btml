@@ -1,0 +1,39 @@
+# Jazz Shuffle in Am
+# Swinging jazz-pop feel with romantic mood
+# Van Morrison / Celtic soul style
+
+track:
+  title: "Jazz Shuffle in Am"
+  key: Am
+  tempo: 132
+  time_signature: 4/4
+  style: jazz
+
+chord_progression:
+  # Jazzy minor progression with ii-V movement
+  pattern: "Am7 Bm7 Am7 Bm7 Am7 Dm7 Am7 E7 Am7 Bm7 Am7 Bm7 Am7 Dm7 E7 Am7"
+  bars_per_chord: 1
+  repeat: 2
+
+rhythm:
+  # Shuffle feel
+  style: shuffle_strum
+  swing: 0.6
+
+bass:
+  # Swing walking bass for that jazz feel
+  style: swing_walking
+  swing: 0.6
+
+drums:
+  # Jazz swing with brushes feel
+  style: jazz_swing
+  intensity: 0.7
+
+melody:
+  enabled: true
+  style: moderate
+  density: 0.5
+
+scale:
+  type: dorian

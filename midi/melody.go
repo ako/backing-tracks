@@ -21,9 +21,11 @@ type MelodyNote struct {
 type MelodyStyle string
 
 const (
-	MelodySimple   MelodyStyle = "simple"   // Mostly half/whole notes, chord tones
-	MelodyModerate MelodyStyle = "moderate" // Quarter notes, some passing tones
-	MelodyActive   MelodyStyle = "active"   // Eighth notes, more motion
+	MelodySimple       MelodyStyle = "simple"        // Mostly half/whole notes, chord tones
+	MelodyModerate     MelodyStyle = "moderate"      // Quarter notes, some passing tones
+	MelodyActive       MelodyStyle = "active"        // Eighth notes, more motion
+	MelodyBluesHead    MelodyStyle = "blues_head"    // Classic AAB 12-bar blues vocal pattern
+	MelodyCallResponse MelodyStyle = "call_response" // Same as blues_head
 )
 
 // MelodyConfig holds melody generation settings
@@ -52,6 +54,11 @@ func GenerateMelody(chords []parser.Chord, key string, style string, config *Mel
 
 	// Seed random for variation
 	rand.Seed(time.Now().UnixNano())
+
+	// Use special generator for blues head / call-response style
+	if config.Style == MelodyBluesHead || config.Style == MelodyCallResponse {
+		return generateBluesHead(chords, key, style, config, ticksPerBar)
+	}
 
 	notes := []MelodyNote{}
 	currentTick := uint32(0)
@@ -269,7 +276,331 @@ func MelodyStyleFromString(s string) MelodyStyle {
 		return MelodyModerate
 	case "active", "busy":
 		return MelodyActive
+	case "blues_head", "blueshead", "blues-head":
+		return MelodyBluesHead
+	case "call_response", "callresponse", "call-response", "aab":
+		return MelodyCallResponse
 	default:
 		return MelodySimple
 	}
+}
+
+// generateBluesHead creates the classic AAB 12-bar blues vocal melody pattern
+// Structure per 12 bars:
+//   Bars 1-2: Call phrase (A)
+//   Bars 3-4: Response/rest
+//   Bars 5-6: Repeat call (A)
+//   Bars 7-8: Response/rest
+//   Bars 9-10: Resolution phrase (B)
+//   Bars 11-12: Turnaround/rest
+func generateBluesHead(chords []parser.Chord, key string, style string, config *MelodyConfig, ticksPerBar uint32) []MelodyNote {
+	notes := []MelodyNote{}
+
+	// Calculate total bars
+	totalBars := 0
+	for _, chord := range chords {
+		totalBars += int(chord.Bars)
+	}
+
+	// Base note in comfortable vocal/guitar range
+	baseNote := 52 + (config.Octave-3)*12 // E3 for octave 3
+
+	// Get the blues scale for the key
+	scale := theory.GetScaleForStyle(key, style, "")
+	scaleNotes := scale.GetScaleNotes(baseNote-5, baseNote+12)
+
+	// Process in 12-bar chunks
+	currentTick := uint32(0)
+	barIndex := 0
+
+	for _, chord := range chords {
+		chordBars := int(chord.Bars)
+		chordTones := theory.GetChordTones(chord.Symbol)
+
+		for b := 0; b < chordBars; b++ {
+			// Where are we in the 12-bar structure?
+			positionIn12 := barIndex % 12
+
+			barStartTick := currentTick + uint32(b)*ticksPerBar
+
+			switch positionIn12 {
+			case 0, 1: // Bars 1-2: First call phrase (A)
+				phraseNotes := generateCallPhrase(barStartTick, ticksPerBar, scaleNotes, chordTones, baseNote, positionIn12, config.Density)
+				notes = append(notes, phraseNotes...)
+
+			case 2, 3: // Bars 3-4: Response (sparse or rest)
+				if rand.Float64() < 0.3 { // Sometimes add a response lick
+					responseNotes := generateResponsePhrase(barStartTick, ticksPerBar, scaleNotes, baseNote)
+					notes = append(notes, responseNotes...)
+				}
+
+			case 4, 5: // Bars 5-6: Repeat call phrase (A) - similar to first
+				phraseNotes := generateCallPhrase(barStartTick, ticksPerBar, scaleNotes, chordTones, baseNote, positionIn12-4, config.Density)
+				notes = append(notes, phraseNotes...)
+
+			case 6, 7: // Bars 7-8: Response (sparse or rest)
+				if rand.Float64() < 0.3 {
+					responseNotes := generateResponsePhrase(barStartTick, ticksPerBar, scaleNotes, baseNote)
+					notes = append(notes, responseNotes...)
+				}
+
+			case 8, 9: // Bars 9-10: Resolution phrase (B) - different melody
+				resolveNotes := generateResolutionPhrase(barStartTick, ticksPerBar, scaleNotes, chordTones, baseNote, positionIn12-8, config.Density)
+				notes = append(notes, resolveNotes...)
+
+			case 10, 11: // Bars 11-12: Turnaround (sparse or characteristic lick)
+				if positionIn12 == 10 && rand.Float64() < 0.5 {
+					turnaroundNotes := generateTurnaroundPhrase(barStartTick, ticksPerBar, scaleNotes, baseNote)
+					notes = append(notes, turnaroundNotes...)
+				}
+			}
+
+			barIndex++
+		}
+
+		currentTick += uint32(chordBars) * ticksPerBar
+	}
+
+	return notes
+}
+
+// generateCallPhrase creates the "call" melody (sung line A)
+// Typical blues vocal phrasing: starts on/near root, moves through scale, ends on chord tone
+func generateCallPhrase(startTick, ticksPerBar uint32, scaleNotes []int, chordTones []int, baseNote int, barInPhrase int, density float64) []MelodyNote {
+	notes := []MelodyNote{}
+
+	if barInPhrase == 0 {
+		// First bar of phrase: main melodic content
+		// Start on the 5th or root, move stepwise
+
+		// Pickup/anacrusis feel - start slightly before beat 2
+		tick := startTick + ticksPerBar/8
+
+		// Starting note: 5th degree (common blues start)
+		startNote := findClosestScaleNote(scaleNotes, baseNote+7)
+
+		// First note - longer, emphasized
+		notes = append(notes, MelodyNote{
+			Note:     uint8(startNote),
+			Tick:     tick,
+			Duration: ticksPerBar / 4,
+			Velocity: 85,
+		})
+
+		// Second note - step down or repeat
+		tick += ticksPerBar / 4
+		secondNote := chooseScaleNote(scaleNotes, startNote, -1)
+		notes = append(notes, MelodyNote{
+			Note:     uint8(secondNote),
+			Tick:     tick,
+			Duration: ticksPerBar / 4,
+			Velocity: 75,
+		})
+
+		// Third note - continue descending or jump
+		if rand.Float64() < density {
+			tick += ticksPerBar / 4
+			thirdNote := chooseScaleNote(scaleNotes, secondNote, -1)
+			notes = append(notes, MelodyNote{
+				Note:     uint8(thirdNote),
+				Tick:     tick,
+				Duration: ticksPerBar / 4,
+				Velocity: 70,
+			})
+		}
+
+	} else {
+		// Second bar of phrase: resolution/tail
+		// Usually shorter, ends on a held note
+
+		tick := startTick + ticksPerBar/8
+
+		// Find a chord tone to land on
+		targetNote := baseNote
+		if len(chordTones) > 0 {
+			targetNote = findClosestNote(chordTones, baseNote, baseNote-5, baseNote+12)
+		}
+
+		// Approach note
+		approachNote := findClosestScaleNote(scaleNotes, targetNote+2)
+		notes = append(notes, MelodyNote{
+			Note:     uint8(approachNote),
+			Tick:     tick,
+			Duration: ticksPerBar / 8,
+			Velocity: 70,
+		})
+
+		// Landing note - held longer
+		tick += ticksPerBar / 6
+		notes = append(notes, MelodyNote{
+			Note:     uint8(targetNote),
+			Tick:     tick,
+			Duration: ticksPerBar / 2,
+			Velocity: 80,
+		})
+	}
+
+	return notes
+}
+
+// generateResponsePhrase creates sparse instrumental response
+func generateResponsePhrase(startTick, ticksPerBar uint32, scaleNotes []int, baseNote int) []MelodyNote {
+	notes := []MelodyNote{}
+
+	// Simple 2-3 note response, often descending
+	tick := startTick + ticksPerBar/4
+
+	note1 := findClosestScaleNote(scaleNotes, baseNote+5)
+	notes = append(notes, MelodyNote{
+		Note:     uint8(note1),
+		Tick:     tick,
+		Duration: ticksPerBar / 6,
+		Velocity: 65,
+	})
+
+	if rand.Float64() < 0.6 {
+		tick += ticksPerBar / 4
+		note2 := chooseScaleNote(scaleNotes, note1, -1)
+		notes = append(notes, MelodyNote{
+			Note:     uint8(note2),
+			Tick:     tick,
+			Duration: ticksPerBar / 4,
+			Velocity: 60,
+		})
+	}
+
+	return notes
+}
+
+// generateResolutionPhrase creates the "B" line (resolution/answer)
+// Different melodic contour than the A phrase
+func generateResolutionPhrase(startTick, ticksPerBar uint32, scaleNotes []int, chordTones []int, baseNote int, barInPhrase int, density float64) []MelodyNote {
+	notes := []MelodyNote{}
+
+	if barInPhrase == 0 {
+		// First bar: Start higher than the A phrase, descend
+		tick := startTick + ticksPerBar/8
+
+		// Start on a higher note (octave or 7th)
+		startNote := findClosestScaleNote(scaleNotes, baseNote+10)
+
+		notes = append(notes, MelodyNote{
+			Note:     uint8(startNote),
+			Tick:     tick,
+			Duration: ticksPerBar / 4,
+			Velocity: 85,
+		})
+
+		// Descend more dramatically
+		tick += ticksPerBar / 4
+		note2 := chooseScaleNote(scaleNotes, startNote, -1)
+		note2 = chooseScaleNote(scaleNotes, note2, -1) // Two steps down
+		notes = append(notes, MelodyNote{
+			Note:     uint8(note2),
+			Tick:     tick,
+			Duration: ticksPerBar / 4,
+			Velocity: 80,
+		})
+
+		if rand.Float64() < density {
+			tick += ticksPerBar / 4
+			note3 := chooseScaleNote(scaleNotes, note2, -1)
+			notes = append(notes, MelodyNote{
+				Note:     uint8(note3),
+				Tick:     tick,
+				Duration: ticksPerBar / 4,
+				Velocity: 75,
+			})
+		}
+
+	} else {
+		// Second bar: Strong resolution to root
+		tick := startTick + ticksPerBar/8
+
+		// Approach from above
+		approachNote := findClosestScaleNote(scaleNotes, baseNote+3)
+		notes = append(notes, MelodyNote{
+			Note:     uint8(approachNote),
+			Tick:     tick,
+			Duration: ticksPerBar / 6,
+			Velocity: 75,
+		})
+
+		// Land on root with emphasis
+		tick += ticksPerBar / 5
+		notes = append(notes, MelodyNote{
+			Note:     uint8(baseNote),
+			Tick:     tick,
+			Duration: ticksPerBar * 2 / 3,
+			Velocity: 90,
+		})
+	}
+
+	return notes
+}
+
+// generateTurnaroundPhrase creates the classic turnaround lick
+// Descending chromatic or scale-based line
+func generateTurnaroundPhrase(startTick, ticksPerBar uint32, scaleNotes []int, baseNote int) []MelodyNote {
+	notes := []MelodyNote{}
+
+	// Classic turnaround: descending line
+	// Start on 5th or 6th, descend to root
+	tick := startTick + ticksPerBar/4
+	eighthNote := ticksPerBar / 8
+
+	// Descending pattern: 5-4-b3-2-1 or similar
+	startNote := findClosestScaleNote(scaleNotes, baseNote+7) // 5th
+
+	for i := 0; i < 4; i++ {
+		notes = append(notes, MelodyNote{
+			Note:     uint8(startNote),
+			Tick:     tick,
+			Duration: eighthNote - 10,
+			Velocity: uint8(75 - i*5),
+		})
+		tick += eighthNote
+		startNote = chooseScaleNote(scaleNotes, startNote, -1)
+		if startNote < baseNote-2 {
+			break
+		}
+	}
+
+	return notes
+}
+
+// findClosestScaleNote finds the scale note closest to target
+func findClosestScaleNote(scaleNotes []int, target int) int {
+	if len(scaleNotes) == 0 {
+		return target
+	}
+
+	closest := scaleNotes[0]
+	for _, n := range scaleNotes {
+		if abs(n-target) < abs(closest-target) {
+			closest = n
+		}
+	}
+	return closest
+}
+
+// findClosestNote finds the note from candidates closest to target within range
+func findClosestNote(candidates []int, target int, minNote, maxNote int) int {
+	closest := target
+	closestDist := 999
+
+	for _, c := range candidates {
+		// Check in multiple octaves
+		for oct := -1; oct <= 2; oct++ {
+			note := c + 12*oct + (target/12)*12 - 12
+			if note >= minNote && note <= maxNote {
+				dist := abs(note - target)
+				if dist < closestDist {
+					closest = note
+					closestDist = dist
+				}
+			}
+		}
+	}
+	return closest
 }

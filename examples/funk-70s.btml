@@ -1,0 +1,38 @@
+# 70s Funk
+# Heavy on the one, syncopated rhythm guitar
+# Parliament/James Brown style
+
+track:
+  title: "70s Funk in E"
+  key: E
+  tempo: 100
+  time_signature: 4/4
+  style: funk
+
+chord_progression:
+  # Classic one-chord funk vamp with occasional movement
+  pattern: "E9 E9 E9 E9 E9 E9 A9 E9"
+  bars_per_chord: 1
+  repeat: 4
+
+rhythm:
+  # Syncopated funk rhythm - heavy on the ONE
+  style: funk
+  accent: "1"
+
+bass:
+  # Slap/funk bass with octaves and syncopation
+  style: funk
+
+drums:
+  # Tight funk beat
+  style: funk
+  intensity: 0.85
+
+melody:
+  enabled: true
+  style: active
+  density: 0.6
+
+scale:
+  type: mixolydian

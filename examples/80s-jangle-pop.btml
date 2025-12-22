@@ -1,0 +1,37 @@
+# 80s Jangle Pop
+# Arpeggiated, dreamy new wave style
+# The Cure / New Order feel
+
+track:
+  title: "80s Jangle Pop in A"
+  key: A
+  tempo: 126
+  time_signature: 4/4
+  style: pop
+
+chord_progression:
+  # Bright, jangly progression with suspended chords
+  pattern: "A Asus4 A Asus2 E Esus4 E E Bm Bm D Dsus4 A Asus4 A E"
+  bars_per_chord: 1
+  repeat: 2
+
+rhythm:
+  # Signature arpeggiated style
+  style: arpeggio_up
+
+bass:
+  # Driving eighth note root-fifth movement
+  style: root_fifth
+
+drums:
+  # Steady new wave beat
+  style: rock_beat
+  intensity: 0.7
+
+melody:
+  enabled: true
+  style: moderate
+  density: 0.4
+
+scale:
+  type: natural_major

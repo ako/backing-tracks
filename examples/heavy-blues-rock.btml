@@ -1,0 +1,39 @@
+# Heavy Blues Rock
+# Driving E-based riff rock with power and swagger
+# Classic late 60s heavy blues-rock style
+
+track:
+  title: "Heavy Blues Rock in E"
+  key: E
+  tempo: 90
+  time_signature: 4/4
+  style: rock
+
+chord_progression:
+  # Heavy riff-based progression - staying on E with occasional movement
+  # The power comes from sitting on that E groove
+  pattern: "E5 E5 E5 E5 E5 E5 D5 E5"
+  bars_per_chord: 1
+  repeat: 4
+
+rhythm:
+  # Heavy eighth notes with accent on the downbeat
+  style: eighth
+  accent: "1"
+
+bass:
+  # Driving boogie-style bass for that heavy rock feel
+  style: boogie
+
+drums:
+  # Powerful rock beat
+  style: rock_beat
+  intensity: 0.95
+
+melody:
+  enabled: true
+  style: active
+  density: 0.7
+
+scale:
+  type: blues

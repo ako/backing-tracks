@@ -317,6 +317,34 @@ func generateRhythmPattern(style string, notes ChordVoicing, startTick, duration
 		// Slower, more sparse fingerpicking for ballads
 		events = append(events, slowFingerpick(notes, startTick, duration, ticksPerBar)...)
 
+	case "funk":
+		// Classic funk: 16th note pattern, heavy on the ONE, syncopated chops
+		events = append(events, funkRhythm(notes, startTick, duration, ticksPerBar, false)...)
+
+	case "funk_muted", "funk_chop":
+		// Choppy/muted funk - more percussive, shorter notes
+		events = append(events, funkRhythm(notes, startTick, duration, ticksPerBar, true)...)
+
+	case "sixteenth", "16th":
+		// Straight 16th notes
+		sixteenthNote := ticksPerBar / 16
+		numSixteenths := int(duration / sixteenthNote)
+		for i := 0; i < numSixteenths; i++ {
+			tick := startTick + uint32(i)*sixteenthNote
+			beat := (i / 4) % 4
+			vel := uint8(60)
+			if i%4 == 0 {
+				vel = 75 // Accent on quarter note positions
+			}
+			if beat == 0 && i%4 == 0 {
+				vel = 90 // Heavy accent on the ONE
+			}
+			for _, note := range notes {
+				events = append(events, midiEvent{tick, midi.NoteOn(0, note, vel)})
+				events = append(events, midiEvent{tick + sixteenthNote - 15, midi.NoteOff(0, note)})
+			}
+		}
+
 	default:
 		// Default to whole notes
 		for _, note := range notes {
@@ -612,6 +640,79 @@ func slowFingerpick(notes ChordVoicing, startTick, duration, ticksPerBar uint32)
 			noteDuration := eighthNote*2 - 10
 			events = append(events, midiEvent{tick, midi.NoteOn(0, p.note, p.vel)})
 			events = append(events, midiEvent{tick + noteDuration, midi.NoteOff(0, p.note)})
+		}
+	}
+
+	return events
+}
+
+// funkRhythm generates classic funk rhythm guitar pattern
+// Heavy on the ONE, syncopated 16th note scratches and chops
+func funkRhythm(notes ChordVoicing, startTick, duration, ticksPerBar uint32, muted bool) []midiEvent {
+	events := []midiEvent{}
+	sixteenthNote := ticksPerBar / 16
+	numBars := duration / ticksPerBar
+	if numBars == 0 {
+		numBars = 1
+	}
+
+	// Note duration - muted = very short/choppy, normal = slightly longer
+	noteDur := sixteenthNote - 20
+	if muted {
+		noteDur = sixteenthNote / 2
+	}
+
+	for bar := uint32(0); bar < numBars; bar++ {
+		barStart := startTick + bar*ticksPerBar
+
+		// Classic funk pattern (16 sixteenth notes per bar):
+		// Position:  1 e & a 2 e & a 3 e & a 4 e & a
+		// Pattern:   X . x . . x X . x . x . . x . x
+		// X = heavy hit, x = lighter hit, . = rest
+		// This creates that syncopated, bouncy funk feel
+		funkPattern := []struct {
+			pos int
+			vel uint8
+			hit bool
+		}{
+			{0, 95, true},   // 1 - THE ONE (heavy!)
+			{1, 0, false},   // e
+			{2, 60, true},   // &
+			{3, 0, false},   // a
+			{4, 0, false},   // 2
+			{5, 65, true},   // e (syncopation!)
+			{6, 80, true},   // & (accent)
+			{7, 0, false},   // a
+			{8, 70, true},   // 3
+			{9, 0, false},   // e
+			{10, 60, true},  // &
+			{11, 0, false},  // a
+			{12, 0, false},  // 4
+			{13, 65, true},  // e (syncopation!)
+			{14, 0, false},  // a
+			{15, 70, true},  // a (pickup to next bar)
+		}
+
+		for _, p := range funkPattern {
+			if !p.hit {
+				continue
+			}
+			tick := barStart + uint32(p.pos)*sixteenthNote
+			vel := p.vel
+			if muted {
+				vel = vel - 10 // Muted is slightly softer
+				if vel < 50 {
+					vel = 50
+				}
+			}
+
+			// Quick strum for that choppy funk sound
+			strumDelay := uint32(5)
+			for j, note := range notes {
+				noteTick := tick + uint32(j)*strumDelay
+				events = append(events, midiEvent{noteTick, midi.NoteOn(0, note, vel)})
+				events = append(events, midiEvent{tick + noteDur, midi.NoteOff(0, note)})
+			}
 		}
 	}
 

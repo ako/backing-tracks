@@ -1,0 +1,35 @@
+# EDM with 808 Bass
+# Heavy electronic dance music with sub bass
+# Style: Modern EDM/House
+
+track:
+  title: "808 Drop"
+  key: Am
+  tempo: 128
+  time_signature: 4/4
+  style: pop
+
+chord_progression:
+  # Classic EDM progression (Am - F - C - G)
+  pattern: "Am Am F F C C G G"
+  bars_per_chord: 1
+  repeat: 4
+
+rhythm:
+  # Synth stabs on offbeats
+  style: eighth
+  accent: "2,4"
+
+bass:
+  # Heavy 808 sub bass
+  style: 808
+
+drums:
+  # Four on the floor EDM beat
+  style: edm
+  intensity: 0.9
+
+melody:
+  enabled: true
+  style: active
+  density: 0.7

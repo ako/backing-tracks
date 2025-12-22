@@ -1,0 +1,38 @@
+# Folk-Rock Ballad
+# Dramatic fingerpicking style with descending bass line
+# Classic 60s/70s folk-rock sound
+
+track:
+  title: "Leaving Blues (Folk-Rock Ballad)"
+  key: Am
+  tempo: 134
+  time_signature: 4/4
+  style: folk
+
+chord_progression:
+  # Verse: Descending bass line under Am chord
+  # Am - Am/G - Am/F - Am/E creates the dramatic tension
+  pattern: "Am Am/G Am/F Am/E Am Am/G Am/F E Am Am/G Am/F Am/E Am Am/G D/F# E"
+  bars_per_chord: 1
+  repeat: 2
+
+rhythm:
+  # Arpeggiated fingerpicking - ascending pattern
+  style: arpeggio_up
+
+bass:
+  # Simple root (follows slash chord bass notes)
+  style: root
+
+drums:
+  # Sparse - just gentle kick
+  style: kick_only
+  intensity: 0.3
+
+melody:
+  enabled: true
+  style: blues_head
+  density: 0.4
+
+scale:
+  type: natural_minor

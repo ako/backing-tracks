@@ -1,0 +1,38 @@
+# High Energy EDM
+# Driving electronic dance with octave bass
+# Style: Festival EDM/Big Room
+
+track:
+  title: "Energy Rush"
+  key: Em
+  tempo: 132
+  time_signature: 4/4
+  style: rock
+
+chord_progression:
+  # Epic EDM progression
+  pattern: "Em C G D Em C G D"
+  bars_per_chord: 1
+  repeat: 4
+
+rhythm:
+  # Pounding eighth notes
+  style: eighth
+  accent: "1,3"
+
+bass:
+  # Bouncy octave bass
+  style: edm
+
+drums:
+  # Four on the floor
+  style: four_on_floor
+  intensity: 0.95
+
+melody:
+  enabled: true
+  style: active
+  density: 0.8
+
+scale:
+  type: pentatonic_minor

@@ -1,0 +1,38 @@
+# Funk Soul
+# Stevie Wonder / Earth Wind Fire style
+# Smooth with sophisticated harmony
+
+track:
+  title: "Funk Soul in Dm"
+  key: Dm
+  tempo: 108
+  time_signature: 4/4
+  style: funk
+
+chord_progression:
+  # Jazzy funk changes
+  pattern: "Dm9 Dm9 Gm7 A7 Dm9 Dm9 Gm7 A7 Dm9 Em7 Fmaj7 E7 Dm9 Gm7 A7 Dm9"
+  bars_per_chord: 1
+  repeat: 2
+
+rhythm:
+  # Smooth funk rhythm
+  style: funk
+  accent: "1,3"
+
+bass:
+  # Simpler funk bass for soul feel
+  style: funk_simple
+
+drums:
+  # Funky groove
+  style: funk
+  intensity: 0.75
+
+melody:
+  enabled: true
+  style: moderate
+  density: 0.5
+
+scale:
+  type: dorian

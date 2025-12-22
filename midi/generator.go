@@ -263,6 +263,11 @@ func getChordVoicing(symbol string) ChordVoicing {
 
 // parseRoot extracts the root note from a chord symbol
 func parseRoot(symbol string) uint8 {
+	// Handle slash chords - get chord root (before slash)
+	if idx := strings.Index(symbol, "/"); idx > 0 {
+		symbol = symbol[:idx]
+	}
+
 	// Get first character(s) for root note
 	root := strings.ToUpper(string(symbol[0]))
 
@@ -273,7 +278,34 @@ func parseRoot(symbol string) uint8 {
 		}
 	}
 
-	// Map to MIDI note number (C=0, C#=1, D=2, etc.)
+	return noteNameToMidi(root)
+}
+
+// parseBassNote extracts the bass note from a chord symbol
+// For slash chords (Am/G), returns the bass note (G)
+// For regular chords (Am), returns the root (A)
+func parseBassNote(symbol string) uint8 {
+	// Check for slash chord
+	if idx := strings.Index(symbol, "/"); idx > 0 && idx < len(symbol)-1 {
+		bassStr := symbol[idx+1:]
+		root := strings.ToUpper(string(bassStr[0]))
+
+		// Check for sharp or flat in bass note
+		if len(bassStr) > 1 {
+			if bassStr[1] == '#' || bassStr[1] == 'b' {
+				root += string(bassStr[1])
+			}
+		}
+
+		return noteNameToMidi(root)
+	}
+
+	// No slash - bass is the chord root
+	return parseRoot(symbol)
+}
+
+// noteNameToMidi converts a note name to MIDI offset (0-11)
+func noteNameToMidi(root string) uint8 {
 	noteMap := map[string]uint8{
 		"C":  0,
 		"C#": 1, "DB": 1,

@@ -1,0 +1,38 @@
+# Funk Rock
+# Red Hot Chili Peppers / Rage Against style
+# Aggressive slap bass with muted guitar
+
+track:
+  title: "Funk Rock in Am"
+  key: Am
+  tempo: 96
+  time_signature: 4/4
+  style: rock
+
+chord_progression:
+  # Minimal chord vamp - funk rock style
+  pattern: "Am7 Am7 D9 Am7 Am7 Am7 G Am7"
+  bars_per_chord: 1
+  repeat: 4
+
+rhythm:
+  # Muted/choppy funk guitar
+  style: funk_muted
+  accent: "1"
+
+bass:
+  # Full slap funk bass
+  style: slap
+
+drums:
+  # Rock beat with funk feel
+  style: rock_beat
+  intensity: 0.9
+
+melody:
+  enabled: true
+  style: active
+  density: 0.5
+
+scale:
+  type: pentatonic_minor

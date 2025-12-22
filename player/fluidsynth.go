@@ -12,14 +12,14 @@ import (
 )
 
 // PlayMIDIWithDisplay plays a MIDI file using FluidSynth with live visual display
-func PlayMIDIWithDisplay(midiFile string, track *parser.Track) error {
+func PlayMIDIWithDisplay(midiFile string, track *parser.Track, customSoundFont string) error {
 	// Check if FluidSynth is installed
 	if _, err := exec.LookPath("fluidsynth"); err != nil {
 		return fmt.Errorf("fluidsynth not found: please install with 'sudo apt install fluidsynth'")
 	}
 
 	// Find a SoundFont file
-	soundFont, err := findSoundFont()
+	soundFont, err := findSoundFont(customSoundFont)
 	if err != nil {
 		return err
 	}
@@ -66,7 +66,7 @@ func PlayMIDI(midiFile string) error {
 	}
 
 	// Find a SoundFont file
-	soundFont, err := findSoundFont()
+	soundFont, err := findSoundFont("")
 	if err != nil {
 		return err
 	}
@@ -97,20 +97,122 @@ func PlayMIDI(midiFile string) error {
 	return nil
 }
 
-// findSoundFont locates a SoundFont file on the system
-func findSoundFont() (string, error) {
-	// Common SoundFont locations on Linux
-	locations := []string{
+// ListSoundFonts returns all available soundfonts on the system
+func ListSoundFonts() []string {
+	var found []string
+
+	// Check local soundfonts directory first
+	localPatterns := []string{
+		"./soundfonts/*.sf2",
+		"./soundfonts/*.SF2",
+	}
+
+	for _, pattern := range localPatterns {
+		matches, err := filepath.Glob(pattern)
+		if err == nil {
+			found = append(found, matches...)
+		}
+	}
+
+	// Check system locations
+	systemLocations := []string{
 		"/usr/share/sounds/sf2/FluidR3_GM.sf2",
 		"/usr/share/sounds/sf2/default.sf2",
 		"/usr/share/soundfonts/FluidR3_GM.sf2",
 		"/usr/share/soundfonts/default.sf2",
 		"/usr/share/soundfonts/default-GM.sf2",
 		"/usr/share/sounds/sf2/TimGM6mb.sf2",
-		// Add more locations as needed
 	}
 
-	for _, loc := range locations {
+	for _, loc := range systemLocations {
+		if _, err := os.Stat(loc); err == nil {
+			found = append(found, loc)
+		}
+	}
+
+	// Find any other .sf2 files in system directories
+	systemPatterns := []string{
+		"/usr/share/sounds/sf2/*.sf2",
+		"/usr/share/soundfonts/*.sf2",
+		"~/.local/share/soundfonts/*.sf2",
+	}
+
+	for _, pattern := range systemPatterns {
+		// Expand ~ to home directory
+		if pattern[0] == '~' {
+			home, _ := os.UserHomeDir()
+			pattern = home + pattern[1:]
+		}
+		matches, err := filepath.Glob(pattern)
+		if err == nil {
+			for _, m := range matches {
+				// Avoid duplicates
+				isDup := false
+				for _, f := range found {
+					if f == m {
+						isDup = true
+						break
+					}
+				}
+				if !isDup {
+					found = append(found, m)
+				}
+			}
+		}
+	}
+
+	return found
+}
+
+// findSoundFont locates a SoundFont file on the system
+func findSoundFont(customPath string) (string, error) {
+	// If custom path provided, use it
+	if customPath != "" {
+		if _, err := os.Stat(customPath); err == nil {
+			return customPath, nil
+		}
+		return "", fmt.Errorf("soundfont not found: %s", customPath)
+	}
+
+	// Check local soundfonts directory first (project-local)
+	localPatterns := []string{
+		"./soundfonts/*.sf2",
+		"./soundfonts/*.SF2",
+	}
+
+	for _, pattern := range localPatterns {
+		matches, err := filepath.Glob(pattern)
+		if err == nil && len(matches) > 0 {
+			return matches[0], nil
+		}
+	}
+
+	// Check user's local soundfonts
+	home, _ := os.UserHomeDir()
+	userLocations := []string{
+		filepath.Join(home, ".local/share/soundfonts"),
+		filepath.Join(home, "soundfonts"),
+	}
+
+	for _, dir := range userLocations {
+		pattern := filepath.Join(dir, "*.sf2")
+		matches, err := filepath.Glob(pattern)
+		if err == nil && len(matches) > 0 {
+			return matches[0], nil
+		}
+	}
+
+	// Common SoundFont locations on Linux
+	systemLocations := []string{
+		"/usr/share/sounds/sf2/FluidR3_GM.sf2",
+		"/usr/share/sounds/sf2/default.sf2",
+		"/usr/share/soundfonts/FluidR3_GM.sf2",
+		"/usr/share/soundfonts/default.sf2",
+		"/usr/share/soundfonts/default-GM.sf2",
+		"/usr/share/sounds/sf2/TimGM6mb.sf2",
+	}
+
+	for _, loc := range systemLocations {
 		if _, err := os.Stat(loc); err == nil {
 			return loc, nil
 		}
@@ -130,5 +232,7 @@ func findSoundFont() (string, error) {
 	}
 
 	return "", fmt.Errorf("no SoundFont (.sf2) file found. Please install fluid-soundfont-gm:\n" +
-		"  sudo apt install fluid-soundfont-gm")
+		"  sudo apt install fluid-soundfont-gm\n\n" +
+		"Or place custom .sf2 files in ./soundfonts/ directory\n" +
+		"Or specify with --soundfont flag")
 }

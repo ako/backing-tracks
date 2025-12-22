@@ -1,0 +1,37 @@
+# Piano Ballad in E
+# Emotional, heartfelt pop ballad
+# Bruno Mars "Talking to the Moon" style
+
+track:
+  title: "Piano Ballad in E"
+  key: E
+  tempo: 74
+  time_signature: 4/4
+  style: pop
+
+chord_progression:
+  # Emotional pop progression with builds
+  pattern: "E B C#m A E B C#m A E B C#m A E B A B"
+  bars_per_chord: 1
+  repeat: 2
+
+rhythm:
+  # Gentle arpeggiated piano
+  style: arpeggio_up
+
+bass:
+  # Simple, supportive whole notes
+  style: root
+
+drums:
+  # Minimal - just gentle pulse
+  style: kick_only
+  intensity: 0.25
+
+melody:
+  enabled: true
+  style: simple
+  density: 0.4
+
+scale:
+  type: natural_major

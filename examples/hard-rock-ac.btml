@@ -1,0 +1,39 @@
+# Hard Rock Groove
+# Grinding power chord rock in the AC/DC style
+# Heavy, relentless, blues-based rock
+
+track:
+  title: "Hard Rock Groove in A"
+  key: A
+  tempo: 73
+  time_signature: 4/4
+  style: rock
+
+chord_progression:
+  # Classic hard rock progression - power chords
+  # Verse feel: sitting on A with D movement
+  pattern: "A5 A5 A5 A5 D5 D5 A5 A5 A5 A5 A5 A5 E5 D5 A5 A5"
+  bars_per_chord: 1
+  repeat: 2
+
+rhythm:
+  # Driving eighth notes - the AC/DC chug
+  style: eighth
+  accent: "1,3"
+
+bass:
+  # Locked in with the kick - root notes pounding
+  style: root_fifth
+
+drums:
+  # Solid rock beat - Rudd style
+  style: rock_beat
+  intensity: 0.9
+
+melody:
+  enabled: true
+  style: active
+  density: 0.6
+
+scale:
+  type: pentatonic_minor

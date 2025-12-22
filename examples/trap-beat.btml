@@ -1,0 +1,34 @@
+# Trap Beat
+# Modern trap with rolling hihats
+# Style: Hip-hop/Trap
+
+track:
+  title: "Trap Mode"
+  key: Cm
+  tempo: 140
+  time_signature: 4/4
+  style: pop
+
+chord_progression:
+  # Dark minor progression
+  pattern: "Cm Cm Ab Ab Bb Bb Gm Gm"
+  bars_per_chord: 1
+  repeat: 4
+
+rhythm:
+  # Sparse synth hits
+  style: half
+
+bass:
+  # Heavy sub bass
+  style: 808
+
+drums:
+  # Trap beat with rolling hihats
+  style: trap
+  intensity: 0.85
+
+melody:
+  enabled: true
+  style: moderate
+  density: 0.5

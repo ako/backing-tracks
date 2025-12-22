@@ -1,0 +1,38 @@
+# Piano Rock Drive
+# Raw, energetic piano-driven rock and roll
+# Late 70s/early 80s Dutch rock style
+
+track:
+  title: "Piano Rock Drive in E"
+  key: E
+  tempo: 138
+  time_signature: 4/4
+  style: rock
+
+chord_progression:
+  # Driving rock and roll changes
+  pattern: "E E A A E E B7 A E E A A E B7 A E"
+  bars_per_chord: 1
+  repeat: 2
+
+rhythm:
+  # Pounding eighth notes - piano rock style
+  style: eighth
+  accent: "1,2,3,4"
+
+bass:
+  # Driving root-fifth rock bass
+  style: root_fifth
+
+drums:
+  # Hard-hitting rock beat
+  style: rock_beat
+  intensity: 0.9
+
+melody:
+  enabled: true
+  style: active
+  density: 0.7
+
+scale:
+  type: pentatonic_major
