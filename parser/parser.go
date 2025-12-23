@@ -28,6 +28,7 @@ type TrackInfo struct {
 	Tempo         int    `yaml:"tempo"`
 	TimeSignature string `yaml:"time_signature"`
 	Style         string `yaml:"style"`
+	Capo          int    `yaml:"capo,omitempty"` // Capo position (0 = no capo)
 }
 
 // ChordProgression represents the chord sequence

@@ -71,6 +71,8 @@ type PlayerController interface {
 	IsPaused() bool
 	Transpose(semitones int)
 	GetTranspose() int
+	SetCapo(fret int)
+	GetCapo() int
 	ToggleTrackMute(track int) // 0=drums, 1=bass, 2=chords, 3=melody
 	IsTrackMuted(track int) bool
 }
@@ -103,6 +105,7 @@ type TUIModel struct {
 	pausedTotal     time.Duration
 	seekOffset      time.Duration // For seeking forward/backward
 	transposeOffset int           // Semitones to transpose (+/-)
+	capoPosition    int           // Capo fret position (0 = no capo)
 	quitting        bool
 
 	// Audio player (optional - for synced playback)
@@ -129,6 +132,7 @@ func NewTUIModel(track *parser.Track) *TUIModel {
 		fretboard:    fretboard,
 		chordChart:   chordChart,
 		currentScale: scale,
+		capoPosition: track.Info.Capo, // Initialize from track
 		playing:      true,
 		width:        120,
 		height:       30,
@@ -235,6 +239,22 @@ func (m *TUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.player != nil {
 				m.player.ToggleTrackMute(3)
 			}
+		case "[":
+			// Move capo down
+			if m.capoPosition > 0 {
+				m.capoPosition--
+				if m.player != nil {
+					m.player.SetCapo(m.capoPosition)
+				}
+			}
+		case "]":
+			// Move capo up
+			if m.capoPosition < 12 {
+				m.capoPosition++
+				if m.player != nil {
+					m.player.SetCapo(m.capoPosition)
+				}
+			}
 		}
 
 	case tea.WindowSizeMsg:
@@ -330,6 +350,15 @@ func (m *TUIModel) renderHeader() string {
 	info := headerStyle.Render(fmt.Sprintf("%s | %d BPM | %s",
 		displayKey, m.track.Info.Tempo, m.track.Info.Style))
 
+	// Show capo indicator
+	capoIndicator := ""
+	if m.capoPosition > 0 {
+		capoIndicator = lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("#00CCCC")).
+			Render(fmt.Sprintf("  [Capo %d]", m.capoPosition))
+	}
+
 	// Show transpose indicator
 	transposeIndicator := ""
 	if m.transposeOffset != 0 {
@@ -374,7 +403,7 @@ func (m *TUIModel) renderHeader() string {
 			Render("  ⏸ PAUSED")
 	}
 
-	return fmt.Sprintf("  %s    %s%s%s%s%s", title, info, transposeIndicator, muteIndicator, scaleName, pauseIndicator)
+	return fmt.Sprintf("  %s    %s%s%s%s%s%s", title, info, capoIndicator, transposeIndicator, muteIndicator, scaleName, pauseIndicator)
 }
 
 // renderLeftColumn renders the chord/beat display
@@ -1052,7 +1081,7 @@ func (m *TUIModel) renderProgressBar() string {
 	filled := int(progress * float64(width))
 	bar := strings.Repeat("▓", filled) + strings.Repeat("░", width-filled)
 
-	controls := headerStyle.Render("  [space] pause  [←/→] seek  [↑/↓] transpose  [1-4] mute tracks  [q] quit")
+	controls := headerStyle.Render("  [space] pause  [←/→] seek  [↑/↓] transpose  [[/]] capo  [1-4] mute  [q] quit")
 
 	return fmt.Sprintf("  %s  %d%% (bar %d/%d)%s",
 		progressStyle.Render(bar),

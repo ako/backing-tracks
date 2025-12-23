@@ -114,6 +114,7 @@ During playback, you'll see:
 | `Space` | Pause / Resume |
 | `←` / `→` | Jump to previous / next bar |
 | `↑` / `↓` | Transpose up / down by semitone |
+| `[` / `]` | Move capo down / up by one fret |
 | `1` | Toggle drums mute |
 | `2` | Toggle bass mute |
 | `3` | Toggle chords mute |
@@ -133,6 +134,7 @@ track:
   tempo: 80
   time_signature: 4/4
   style: blues
+  capo: 0                # Capo position (0 = no capo)
 
 chord_progression:
   pattern: "A7 A7 A7 A7 D7 D7 A7 A7 E7 D7 A7 E7"
@@ -399,6 +401,7 @@ Contributions welcome! See:
 **v0.6 (Current)**
 - ✅ **Real-time playback controls**: Pause/resume (space), seek (←/→)
 - ✅ **Transpose controls**: Shift song up/down by semitones (↑/↓)
+- ✅ **Capo support**: Set capo in BTML file or adjust live with [/] keys
 - ✅ **Track mute controls**: Mute individual tracks with keys 1-4
 - ✅ **Chord tones fretboard**: Shows all positions for current chord notes
 - ✅ **Synced audio & display**: Controls affect both sound and visuals

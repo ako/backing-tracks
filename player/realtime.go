@@ -31,6 +31,7 @@ type RealtimePlayer struct {
 	lastEventIdx    int
 	activeNotes     map[noteKey]bool // Track active notes for cleanup
 	transposeOffset int              // Semitones to transpose
+	capoPosition    int              // Capo fret position (0 = no capo)
 	mutedTracks     [4]bool          // 0=drums, 1=bass, 2=chords, 3=melody
 
 	// Control channels
@@ -80,6 +81,7 @@ func NewRealtimePlayer(track *parser.Track, soundFont string) (*RealtimePlayer, 
 		playbackData: playbackData,
 		track:        track,
 		activeNotes:  make(map[noteKey]bool),
+		capoPosition: track.Info.Capo, // Initialize from track
 		stopChan:     make(chan struct{}),
 	}
 
@@ -176,16 +178,20 @@ func (p *RealtimePlayer) playEvent(evt midi.PlaybackEvent) {
 		return // Skip muted track
 	}
 
-	// Apply transpose (except for drums on channel 9)
+	// Apply capo and transpose (except for drums on channel 9)
 	note := evt.Note
-	if evt.Channel != 9 && p.transposeOffset != 0 {
-		transposed := int(note) + p.transposeOffset
-		if transposed < 0 {
-			transposed = 0
-		} else if transposed > 127 {
-			transposed = 127
+	if evt.Channel != 9 {
+		// Capo shifts pitch up, transpose can shift either direction
+		offset := p.capoPosition + p.transposeOffset
+		if offset != 0 {
+			transposed := int(note) + offset
+			if transposed < 0 {
+				transposed = 0
+			} else if transposed > 127 {
+				transposed = 127
+			}
+			note = uint8(transposed)
 		}
-		note = uint8(transposed)
 	}
 
 	key := noteKey{evt.Channel, note}
@@ -322,6 +328,33 @@ func (p *RealtimePlayer) GetTranspose() int {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	return p.transposeOffset
+}
+
+// SetCapo sets the capo position (0 = no capo)
+func (p *RealtimePlayer) SetCapo(fret int) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if fret < 0 {
+		fret = 0
+	} else if fret > 12 {
+		fret = 12
+	}
+
+	// Stop all current notes before changing capo
+	for key := range p.activeNotes {
+		p.sendCommand(fmt.Sprintf("noteoff %d %d", key.channel, key.note))
+	}
+	p.activeNotes = make(map[noteKey]bool)
+
+	p.capoPosition = fret
+}
+
+// GetCapo returns the current capo position
+func (p *RealtimePlayer) GetCapo() int {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.capoPosition
 }
 
 // ToggleTrackMute toggles mute state for a track (0=drums, 1=bass, 2=chords, 3=melody)
