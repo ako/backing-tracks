@@ -44,6 +44,85 @@ type noteKey struct {
 	note    uint8
 }
 
+// GMInstruments maps friendly instrument names to General MIDI program numbers
+var GMInstruments = map[string]int{
+	// Pianos
+	"piano":          0,
+	"acoustic_piano": 0,
+	"bright_piano":   1,
+	"electric_piano": 4,
+	"honky_tonk":     3,
+	"harpsichord":    6,
+	"clavinet":       7,
+
+	// Guitars
+	"nylon_guitar":    24,
+	"steel_guitar":    25,
+	"jazz_guitar":     26,
+	"clean_guitar":    27,
+	"muted_guitar":    28,
+	"overdrive":       29,
+	"distortion":      30,
+	"harmonics":       31,
+
+	// Bass
+	"acoustic_bass":  32,
+	"fingered_bass":  33,
+	"picked_bass":    34,
+	"fretless_bass":  35,
+	"slap_bass":      36,
+	"synth_bass":     38,
+
+	// Strings
+	"violin":         40,
+	"viola":          41,
+	"cello":          42,
+	"contrabass":     43,
+	"strings":        48,
+	"slow_strings":   49,
+
+	// Brass
+	"trumpet":        56,
+	"trombone":       57,
+	"tuba":           58,
+	"french_horn":    60,
+	"brass":          61,
+	"synth_brass":    62,
+
+	// Woodwinds
+	"soprano_sax":    64,
+	"alto_sax":       65,
+	"tenor_sax":      66,
+	"baritone_sax":   67,
+	"oboe":           68,
+	"clarinet":       71,
+	"flute":          73,
+	"pan_flute":      75,
+
+	// Synth
+	"synth_lead":     80,
+	"synth_pad":      88,
+
+	// Organ
+	"organ":          16,
+	"church_organ":   19,
+	"reed_organ":     20,
+	"accordion":      21,
+	"harmonica":      22,
+	"bandoneon":      23,
+}
+
+// getGMProgram returns the GM program number for an instrument name
+func getGMProgram(name string, defaultProg int) int {
+	if name == "" {
+		return defaultProg
+	}
+	if prog, ok := GMInstruments[name]; ok {
+		return prog
+	}
+	return defaultProg
+}
+
 // NewRealtimePlayer creates a new real-time player
 func NewRealtimePlayer(track *parser.Track, soundFont string) (*RealtimePlayer, error) {
 	// Generate playback data
@@ -85,10 +164,23 @@ func NewRealtimePlayer(track *parser.Track, soundFont string) (*RealtimePlayer, 
 		stopChan:     make(chan struct{}),
 	}
 
-	// Set program changes for each channel
-	player.sendCommand("prog 0 0")   // Piano for chords
-	player.sendCommand("prog 1 33")  // Fingered bass
-	player.sendCommand("prog 2 25")  // Steel guitar for melody
+	// Set program changes for each channel based on track settings
+	chordsInstrument := ""
+	if track.Rhythm != nil {
+		chordsInstrument = track.Rhythm.Instrument
+	}
+	bassInstrument := ""
+	if track.Bass != nil {
+		bassInstrument = track.Bass.Instrument
+	}
+	melodyInstrument := ""
+	if track.Melody != nil {
+		melodyInstrument = track.Melody.Instrument
+	}
+
+	player.sendCommand(fmt.Sprintf("prog 0 %d", getGMProgram(chordsInstrument, 0)))  // Chords (default: piano)
+	player.sendCommand(fmt.Sprintf("prog 1 %d", getGMProgram(bassInstrument, 33)))   // Bass (default: fingered bass)
+	player.sendCommand(fmt.Sprintf("prog 2 %d", getGMProgram(melodyInstrument, 25))) // Melody (default: steel guitar)
 
 	return player, nil
 }

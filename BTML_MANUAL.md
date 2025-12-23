@@ -172,6 +172,7 @@ rhythm:
   style: quarter            # Use a preset style
   swing: 0.55               # Optional swing feel (0.5 = straight)
   accent: "1,3"             # Optional beat accents
+  instrument: nylon_guitar  # Optional GM instrument (default: piano)
 ```
 
 | Style | Description | Best For |
@@ -271,6 +272,7 @@ rhythm:
 bass:
   style: walking            # Bass style
   swing: 0.6                # Optional swing
+  instrument: fretless_bass # Optional GM instrument (default: fingered_bass)
 ```
 
 ### Bass Styles
@@ -362,6 +364,7 @@ melody:
   style: moderate           # Complexity level
   density: 0.5              # 0.0-1.0, how sparse/dense
   octave: 4                 # Base octave (default 4)
+  instrument: flute         # Optional GM instrument (default: steel_guitar)
 ```
 
 ### Melody Styles
@@ -373,6 +376,73 @@ melody:
 | `active` | Eighth notes, more motion | Jazz, funk |
 | `blues_head` | Classic AAB 12-bar blues vocal | Blues |
 | `call_response` | Same as blues_head | Blues |
+
+---
+
+## Instruments
+
+Each section can specify a General MIDI instrument. Available instruments:
+
+### Pianos & Keyboards
+| Name | GM# | Description |
+|------|-----|-------------|
+| `piano` | 0 | Acoustic Grand Piano |
+| `bright_piano` | 1 | Bright Acoustic Piano |
+| `electric_piano` | 4 | Electric Piano 1 |
+| `honky_tonk` | 3 | Honky-tonk Piano |
+| `harpsichord` | 6 | Harpsichord |
+| `clavinet` | 7 | Clavinet |
+
+### Guitars
+| Name | GM# | Description |
+|------|-----|-------------|
+| `nylon_guitar` | 24 | Acoustic Guitar (nylon) |
+| `steel_guitar` | 25 | Acoustic Guitar (steel) |
+| `jazz_guitar` | 26 | Electric Guitar (jazz) |
+| `clean_guitar` | 27 | Electric Guitar (clean) |
+| `muted_guitar` | 28 | Electric Guitar (muted) |
+| `overdrive` | 29 | Overdriven Guitar |
+| `distortion` | 30 | Distortion Guitar |
+| `harmonics` | 31 | Guitar Harmonics |
+
+### Bass
+| Name | GM# | Description |
+|------|-----|-------------|
+| `acoustic_bass` | 32 | Acoustic Bass |
+| `fingered_bass` | 33 | Electric Bass (finger) |
+| `picked_bass` | 34 | Electric Bass (pick) |
+| `fretless_bass` | 35 | Fretless Bass |
+| `slap_bass` | 36 | Slap Bass 1 |
+| `synth_bass` | 38 | Synth Bass 1 |
+
+### Strings & Brass
+| Name | GM# | Description |
+|------|-----|-------------|
+| `violin` | 40 | Violin |
+| `cello` | 42 | Cello |
+| `contrabass` | 43 | Contrabass |
+| `strings` | 48 | String Ensemble 1 |
+| `trumpet` | 56 | Trumpet |
+| `trombone` | 57 | Trombone |
+| `french_horn` | 60 | French Horn |
+| `brass` | 61 | Brass Section |
+
+### Woodwinds
+| Name | GM# | Description |
+|------|-----|-------------|
+| `soprano_sax` | 64 | Soprano Sax |
+| `alto_sax` | 65 | Alto Sax |
+| `tenor_sax` | 66 | Tenor Sax |
+| `clarinet` | 71 | Clarinet |
+| `flute` | 73 | Flute |
+
+### Organ & Others
+| Name | GM# | Description |
+|------|-----|-------------|
+| `organ` | 16 | Drawbar Organ |
+| `church_organ` | 19 | Church Organ |
+| `accordion` | 21 | Accordion |
+| `harmonica` | 22 | Harmonica |
 
 ---
 
@@ -723,3 +793,6 @@ Features:
 - Bubbletea TUI with three-column layout
 - Custom SoundFont support
 - MIDI and Strudel export
+- **Instrument selection**: 50+ GM instruments (nylon_guitar, slap_bass, etc.)
+- **Capo support**: Set in BTML or adjust live with keyboard
+- **Transpose controls**: Shift key up/down during playback

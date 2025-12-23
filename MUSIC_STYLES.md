@@ -818,23 +818,19 @@ drums:
 
 ## Quick Reference Table
 
-| Style | Rhythm | Bass | Drums | Tempo Range | Swing |
-|-------|--------|------|-------|-------------|-------|
-| Rock | `eighth`, `strum_up_down` | `root_fifth`, `walking` | `rock_beat` | 90-140 | No |
-| Blues | `shuffle_strum` | `swing_walking` | `shuffle`, `blues_shuffle` | 60-120 | Yes (0.67) |
-| Jazz | `whole`, `half` | `swing_walking` | `jazz_swing` | 100-180 | Yes (0.67) |
-| Folk | `travis`, `fingerpick` | `root` | Light or none | 80-140 | No |
-| Funk | `funk`, `funk_muted` | `funk`, `slap` | `rock_beat` | 90-120 | No |
-| Ska | `ska`, `skank` | `ska` | `ska` | 140-180 | No |
-| Reggae | `reggae`, `one_drop` | `reggae` | `reggae` | 70-90 | No |
-| Country | `country`, `train` | `country` | `country` | 100-140 | No |
-| Disco | `disco` | `disco` | `disco` | 110-130 | No |
-| Motown | `motown`, `soul` | `motown` | `motown` | 100-130 | No |
-| Flamenco | `flamenco`, `rumba` | (use root) | `flamenco` | 80-120 | No |
-| EDM | `sixteenth` | `808_octave`, `edm` | `edm`, `four_on_floor` | 120-150 | No |
-| Trap | `sixteenth` | `808`, `sub` | `trap` | 65-85 (half-time) | No |
-| Ragtime | `ragtime`, `stride` | `stride` | Light | 80-120 | No |
-| Boogie | `stride` | `boogie` | `shuffle` | 120-160 | Slight |
+| Style | Rhythm | Bass | Drums | Tempo | Instruments |
+|-------|--------|------|-------|-------|-------------|
+| Rock | `eighth` | `root_fifth` | `rock_beat` | 90-140 | `steel_guitar`, `overdrive` |
+| Blues | `shuffle_strum` | `swing_walking` | `shuffle` | 60-120 | `steel_guitar`, `fretless_bass` |
+| Jazz | `whole`, `half` | `swing_walking` | `jazz_swing` | 100-180 | `jazz_guitar`, `contrabass` |
+| Folk | `travis`, `fingerpick` | `root` | Light/none | 80-140 | `nylon_guitar`, `steel_guitar` |
+| Funk | `funk`, `funk_muted` | `slap` | `rock_beat` | 90-120 | `clean_guitar`, `slap_bass` |
+| Classical | `arpeggio_up` | `root` | none | 60-100 | `nylon_guitar`, `strings` |
+| Country | `country`, `train` | `root_fifth` | `country` | 100-140 | `steel_guitar`, `picked_bass` |
+| Disco | `disco` | `disco` | `disco` | 110-130 | `clean_guitar`, `fingered_bass` |
+| EDM | `sixteenth` | `808_octave` | `four_on_floor` | 120-150 | `synth_lead`, `synth_bass` |
+| Ragtime | `stride` | `stride` | Light | 80-120 | `honky_tonk`, `piano` |
+| Boogie | `stride` | `boogie` | `shuffle` | 120-160 | `honky_tonk`, `piano` |
 
 ---
 
@@ -844,7 +840,8 @@ drums:
 2. **Use appropriate tempos** - Reggae at 160 BPM won't feel right
 3. **Consider swing** - Blues and jazz need it; funk and disco don't
 4. **Adjust intensity** - Ballads need lower intensity; dance music needs higher
-5. **Listen to examples** - The best way to understand a style is to listen to it
+5. **Choose fitting instruments** - Nylon guitar for classical, slap bass for funk
+6. **Listen to examples** - The best way to understand a style is to listen to it
 
 ## Further Reading
 

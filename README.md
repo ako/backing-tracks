@@ -144,10 +144,12 @@ chord_progression:
 rhythm:
   style: shuffle_strum
   swing: 0.6
+  instrument: steel_guitar    # Optional: GM instrument name
 
 bass:
   style: swing_walking
   swing: 0.6
+  instrument: fingered_bass   # Optional: GM instrument name
 
 drums:
   style: shuffle
@@ -216,6 +218,26 @@ chord_progression:
 | `arpeggio_down` | Descending arpeggio | Classical, ballads |
 | `stride` | Chords on 2 & 4 | Ragtime, stride piano |
 | `ragtime` | Stride with syncopation | Ragtime |
+
+### Instruments
+
+Override the default instrument for any section:
+
+```yaml
+rhythm:
+  style: fingerpick
+  instrument: nylon_guitar
+```
+
+| Category | Instruments |
+|----------|-------------|
+| **Pianos** | `piano`, `electric_piano`, `honky_tonk`, `harpsichord` |
+| **Guitars** | `nylon_guitar`, `steel_guitar`, `jazz_guitar`, `clean_guitar`, `overdrive`, `distortion` |
+| **Bass** | `acoustic_bass`, `fingered_bass`, `picked_bass`, `fretless_bass`, `slap_bass`, `synth_bass` |
+| **Strings** | `violin`, `cello`, `strings`, `contrabass` |
+| **Brass** | `trumpet`, `trombone`, `brass`, `french_horn` |
+| **Woodwinds** | `alto_sax`, `tenor_sax`, `clarinet`, `flute` |
+| **Organ** | `organ`, `church_organ`, `accordion`, `harmonica` |
 
 ### Bass Styles
 
@@ -402,6 +424,7 @@ Contributions welcome! See:
 - ✅ **Real-time playback controls**: Pause/resume (space), seek (←/→)
 - ✅ **Transpose controls**: Shift song up/down by semitones (↑/↓)
 - ✅ **Capo support**: Set capo in BTML file or adjust live with [/] keys
+- ✅ **Instrument selection**: Choose GM instruments per section (nylon_guitar, slap_bass, etc.)
 - ✅ **Track mute controls**: Mute individual tracks with keys 1-4
 - ✅ **Chord tones fretboard**: Shows all positions for current chord notes
 - ✅ **Synced audio & display**: Controls affect both sound and visuals

@@ -148,17 +148,19 @@ func (cp *ChordProgression) TotalBars() int {
 
 // Bass represents the bass line configuration
 type Bass struct {
-	Style   string  `yaml:"style"`            // walking, root, root_fifth, etc.
-	Pattern string  `yaml:"pattern,omitempty"` // Custom pattern (optional)
-	Swing   float64 `yaml:"swing,omitempty"`   // Swing feel (0.5 = straight, 0.67 = triplet)
+	Style      string  `yaml:"style"`              // walking, root, root_fifth, etc.
+	Pattern    string  `yaml:"pattern,omitempty"`  // Custom pattern (optional)
+	Swing      float64 `yaml:"swing,omitempty"`    // Swing feel (0.5 = straight, 0.67 = triplet)
+	Instrument string  `yaml:"instrument,omitempty"` // GM instrument name (default: fingered_bass)
 }
 
 // Rhythm represents the chord strumming/voicing pattern
 type Rhythm struct {
-	Style   string  `yaml:"style"`             // whole, half, quarter, eighth, strum_down, strum_up_down, folk, shuffle_strum, pattern
-	Pattern string  `yaml:"pattern,omitempty"` // Custom pattern: D=down, U=up, .=rest, x=muted, e.g. "D.DU.UDU"
-	Swing   float64 `yaml:"swing,omitempty"`   // Swing feel (0.5 = straight, 0.67 = triplet)
-	Accent  string  `yaml:"accent,omitempty"`  // Which beats to accent: "1", "1,3", "2,4", etc.
+	Style      string  `yaml:"style"`              // whole, half, quarter, eighth, strum_down, strum_up_down, folk, shuffle_strum, pattern
+	Pattern    string  `yaml:"pattern,omitempty"`  // Custom pattern: D=down, U=up, .=rest, x=muted, e.g. "D.DU.UDU"
+	Swing      float64 `yaml:"swing,omitempty"`    // Swing feel (0.5 = straight, 0.67 = triplet)
+	Accent     string  `yaml:"accent,omitempty"`   // Which beats to accent: "1", "1,3", "2,4", etc.
+	Instrument string  `yaml:"instrument,omitempty"` // GM instrument name (default: piano)
 }
 
 // Drums represents the drum configuration
@@ -192,10 +194,11 @@ type EuclideanRhythm struct {
 
 // Melody configuration for auto-generated improvisation
 type Melody struct {
-	Enabled bool    `yaml:"enabled"`           // Enable melody generation
-	Style   string  `yaml:"style,omitempty"`   // simple, moderate, active
-	Density float64 `yaml:"density,omitempty"` // 0.0-1.0, how many notes to play
-	Octave  int     `yaml:"octave,omitempty"`  // Base octave (default 4)
+	Enabled    bool    `yaml:"enabled"`              // Enable melody generation
+	Style      string  `yaml:"style,omitempty"`      // simple, moderate, active
+	Density    float64 `yaml:"density,omitempty"`    // 0.0-1.0, how many notes to play
+	Octave     int     `yaml:"octave,omitempty"`     // Base octave (default 4)
+	Instrument string  `yaml:"instrument,omitempty"` // GM instrument name (default: steel_guitar)
 }
 
 // ScaleConfig allows overriding auto-detected scale
