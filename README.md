@@ -4,19 +4,19 @@ A terminal-based backing track player that uses the BTML (Backing Track Markup L
 
 ## What Works
 
- ✅ Parse YAML-based BTML files
- ✅ Display track info and chord progressions in terminal
- ✅ Generate MIDI files from chord progressions
- ✅ **Bass line generation** (root, root_fifth, walking, swing_walking, stride, boogie)
- ✅ **Drum patterns** (rock_beat, shuffle, jazz_swing, kick_only)
- ✅ **Rhythm styles** (strumming, fingerpicking, travis, arpeggio, stride, ragtime)
- ✅ **Euclidean rhythms** for algorithmic drum patterns
- ✅ **Live visual display** - shows current chord, beat, scale fretboard, and chord charts!
- ✅ **Auto-generated melody** - improvisation based on scale and style
- ✅ **Guitar fretboard display** - shows scale positions for soloing
- ✅ **Chord chart display** - shows finger positions for current chord
- ✅ **Strudel export** - export to Strudel live coding format
- ✅ Play backing tracks via FluidSynth (when installed)
+ - ✅ Parse YAML-based BTML files
+ - ✅ Display track info and chord progressions in terminal
+ - ✅ Generate MIDI files from chord progressions
+ - ✅ **Bass line generation** (root, root_fifth, walking, swing_walking, stride, boogie)
+ - ✅ **Drum patterns** (rock_beat, shuffle, jazz_swing, kick_only)
+ - ✅ **Rhythm styles** (strumming, fingerpicking, travis, arpeggio, stride, ragtime)
+ - ✅ **Euclidean rhythms** for algorithmic drum patterns
+ - ✅ **Live visual display** - shows current chord, beat, scale fretboard, and chord charts!
+ - ✅ **Auto-generated melody** - improvisation based on scale and style
+ - ✅ **Guitar fretboard display** - shows scale positions for soloing
+ - ✅ **Chord chart display** - shows finger positions for current chord
+ - ✅ **Strudel export** - export to Strudel live coding format
+ - ✅ Play backing tracks via FluidSynth (when installed)
 
 **Supported Styles**: Rock, Blues, Jazz, Folk, Funk, Ska, Reggae, Country, Disco, Motown/Soul, Flamenco, EDM, Trap, Ragtime, Stride, Boogie-Woogie. See [MUSIC_STYLES.md](MUSIC_STYLES.md) for music theory and implementation details.
 
