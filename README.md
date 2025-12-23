@@ -4,19 +4,19 @@ A terminal-based backing track player that uses the BTML (Backing Track Markup L
 
 ## What Works
 
-✅ Parse YAML-based BTML files
-✅ Display track info and chord progressions in terminal
-✅ Generate MIDI files from chord progressions
-✅ **Bass line generation** (root, root_fifth, walking, swing_walking, stride, boogie)
-✅ **Drum patterns** (rock_beat, shuffle, jazz_swing, kick_only)
-✅ **Rhythm styles** (strumming, fingerpicking, travis, arpeggio, stride, ragtime)
-✅ **Euclidean rhythms** for algorithmic drum patterns
-✅ **Live visual display** - shows current chord, beat, scale fretboard, and chord charts!
-✅ **Auto-generated melody** - improvisation based on scale and style
-✅ **Guitar fretboard display** - shows scale positions for soloing
-✅ **Chord chart display** - shows finger positions for current chord
-✅ **Strudel export** - export to Strudel live coding format
-✅ Play backing tracks via FluidSynth (when installed)
+ ✅ Parse YAML-based BTML files
+ ✅ Display track info and chord progressions in terminal
+ ✅ Generate MIDI files from chord progressions
+ ✅ **Bass line generation** (root, root_fifth, walking, swing_walking, stride, boogie)
+ ✅ **Drum patterns** (rock_beat, shuffle, jazz_swing, kick_only)
+ ✅ **Rhythm styles** (strumming, fingerpicking, travis, arpeggio, stride, ragtime)
+ ✅ **Euclidean rhythms** for algorithmic drum patterns
+ ✅ **Live visual display** - shows current chord, beat, scale fretboard, and chord charts!
+ ✅ **Auto-generated melody** - improvisation based on scale and style
+ ✅ **Guitar fretboard display** - shows scale positions for soloing
+ ✅ **Chord chart display** - shows finger positions for current chord
+ ✅ **Strudel export** - export to Strudel live coding format
+ ✅ Play backing tracks via FluidSynth (when installed)
 
 **Supported Styles**: Rock, Blues, Jazz, Folk, Funk, Ska, Reggae, Country, Disco, Motown/Soul, Flamenco, EDM, Trap, Ragtime, Stride, Boogie-Woogie. See [MUSIC_STYLES.md](MUSIC_STYLES.md) for music theory and implementation details.
 
@@ -68,24 +68,7 @@ During playback, you'll see:
 - **Chord diagrams** with finger positions
 - Progress bar through the progression
 
-```
-  Slow Blues in A (Full Band)                       A | 80 BPM  │  Scale: A Blues
-  ══════════════════════════════════════════════════════════════════
-
-                A7                               A7                     │   A Blues
-                                                                        │    0 1 2 3 4 5 6 7 8 9 101112
-   .   ↓   .   ↓   .   ↓   .   ↑    .   ↓   .   ↓   .   ↓   .   ↑      │  e ● · · ● · ◆ · · ● · ● ● ●
-   ●       ○       ○       ○        1       2       3       4          │  B · ● · ● ● ● · · ● · ◆ · ·
-  ──────────────────────────────────────────────────────────────────    │  G ● · ◆ · · ● · ● ● ● · · ●
-                A7                               A7                     │  D ● ● ● · · ● · ◆ · · ● · ●
-                                                                        │  A ◆ · · ● · ● ● ● · · ● · ◆
-                                                                        │  E ● · · ● · ◆ · · ● · ● ● ●
-                                                                        │
-                                                                        │   A7 [x02020]
-                                                                        │   E  A  D  G  B  e
-
-  ▓▓▓▓▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  20% (bar 5/24)
-```
+![Live Display Screenshot](screenshot-player.png)
 
 ## BTML File Format
 
@@ -320,9 +303,14 @@ backing-tracks/
 
 ## Dependencies
 
+**Go Libraries:**
 - `gopkg.in/yaml.v3` - YAML parsing
 - `gitlab.com/gomidi/midi/v2` - MIDI file generation
-- FluidSynth (external) - Audio synthesis
+- `github.com/charmbracelet/bubbletea` - Terminal UI framework
+- `github.com/charmbracelet/lipgloss` - Terminal styling
+
+**External:**
+- FluidSynth - Audio synthesis
 
 ## Troubleshooting
 
