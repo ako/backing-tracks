@@ -1,0 +1,61 @@
+# Amazing Grace - Traditional Hymn (1779)
+# Words by John Newton, melody traditional
+# Public domain
+
+track:
+  title: "Amazing Grace"
+  key: G
+  tempo: 80
+  time_signature: 3/4
+  style: folk
+
+chord_progression:
+  pattern: |
+    G*1 G*1 G*1 C*1
+    G*1 G*1 Em*1 D*1
+    G*1 G*1 G*1 C*1
+    G*1 D*1 G*1 G*1
+  repeat: 2
+
+rhythm:
+  style: fingerpick_slow
+
+bass:
+  style: root
+
+drums:
+  style: none
+
+lyrics:
+  - "A-"
+  - "ma-"
+  - "zing"
+  - "grace,"
+  - "how"
+  - "sweet"
+  - "the"
+  - "sound,"
+  - "that"
+  - "saved"
+  - "a"
+  - "wretch"
+  - "like"
+  - "me."
+  - ""
+  - ""
+  - "I"
+  - "once"
+  - "was"
+  - "lost,"
+  - "but"
+  - "now"
+  - "am"
+  - "found,"
+  - "was"
+  - "blind"
+  - "but"
+  - "now"
+  - "I"
+  - "see."
+  - ""
+  - ""

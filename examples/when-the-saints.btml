@@ -1,0 +1,65 @@
+# When the Saints Go Marching In - Traditional Spiritual
+# Public domain
+
+track:
+  title: "When the Saints Go Marching In"
+  key: G
+  tempo: 120
+  time_signature: 4/4
+  style: folk
+
+chord_progression:
+  pattern: |
+    G*2 G*2
+    G*1 G*1 D7*2
+    D7*2 D7*1 G*1
+    G*2 G*2
+    G*2 G7*2
+    C*2 C*2
+    G*1 Em*1 D7*2
+    G*1 D7*1 G*2
+  repeat: 2
+
+rhythm:
+  style: strum_down
+
+bass:
+  style: root_fifth
+
+drums:
+  style: rock_beat
+  intensity: 0.6
+
+lyrics:
+  - "Oh, when the"
+  - "saints"
+  - "go march-"
+  - "ing in,"
+  - "oh, when the"
+  - "saints go"
+  - "march-"
+  - "ing in,"
+  - "Lord, I"
+  - "want to"
+  - "be in that"
+  - "number,"
+  - "when the"
+  - "saints go"
+  - "march-ing"
+  - "in."
+  - "Oh, when the"
+  - "sun"
+  - "refuse to"
+  - "shine,"
+  - "oh, when the"
+  - "sun re-"
+  - "fuse to"
+  - "shine,"
+  - "Lord, I"
+  - "want to"
+  - "be in that"
+  - "number,"
+  - "when the"
+  - "sun re-"
+  - "fuse to"
+  - "shine."
