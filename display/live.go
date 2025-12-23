@@ -179,6 +179,12 @@ func getStrumPattern(rhythm *parser.Rhythm) string {
 		return ". . ↓ . . . ↓ ."
 	case "ragtime":
 		return ". ↓ ↓ . . ↓ ↓ ."
+	case "sixteenth":
+		return "↓.↑.↓.↑.↓.↑.↓.↑."
+	case "funk_16th":
+		return "↓.x.↑x↓.x.↑.↓x↑."
+	case "funk_muted":
+		return "x.↓.x.↑.x.↓.x.↑."
 	default:
 		return "↓ . ↑ . ↓ . ↑ ."
 	}
@@ -547,7 +553,12 @@ func (ld *LiveDisplay) renderBarLine(startBar int, currentBar int, currentBeat i
 	fmt.Print("  ")
 	for i := startBar; i < endBar; i++ {
 		if i < len(ld.bars) {
-			beatDisplay := ld.formatBeatNumbers(i == currentBar, currentBeat, barWidth)
+			var beatDisplay string
+			if ld.isSixteenthNoteStyle() {
+				beatDisplay = ld.formatBeatNumbers16th(i == currentBar, currentBeat, barWidth)
+			} else {
+				beatDisplay = ld.formatBeatNumbers(i == currentBar, currentBeat, barWidth)
+			}
 			if i == currentBar {
 				fmt.Printf("%s%s%s  ", colorGreen, beatDisplay, colorReset)
 			} else {
@@ -676,6 +687,47 @@ func (ld *LiveDisplay) formatBeatNumbers(isCurrentBar bool, currentBeat int, wid
 	}
 
 	return display
+}
+
+// formatBeatNumbers16th formats beat numbers for 16th note patterns
+func (ld *LiveDisplay) formatBeatNumbers16th(isCurrentBar bool, currentBeat int, width int) string {
+	// 16th note subdivisions: 1 e + a 2 e + a 3 e + a 4 e + a
+	beats := []string{"1", "e", "+", "a", "2", "e", "+", "a", "3", "e", "+", "a", "4", "e", "+", "a"}
+
+	var result []string
+	for i, b := range beats {
+		beatNum := i / 4 // Which quarter note beat (0-3)
+		if isCurrentBar {
+			if beatNum == currentBeat && i%4 == 0 {
+				result = append(result, "●") // Current beat downbeat
+			} else if i == 0 && beatNum != currentBeat {
+				result = append(result, "◉") // Beat 1 (downbeat) when not current
+			} else {
+				result = append(result, b)
+			}
+		} else {
+			result = append(result, b)
+		}
+	}
+
+	// Format: "1 e + a 2 e + a 3 e + a 4 e + a"
+	display := " " + strings.Join(result, " ")
+
+	runeCount := utf8.RuneCountInString(display)
+	if runeCount < width {
+		display = display + strings.Repeat(" ", width-runeCount)
+	}
+
+	return display
+}
+
+// isSixteenthNoteStyle returns true if the rhythm style uses 16th notes
+func (ld *LiveDisplay) isSixteenthNoteStyle() bool {
+	if ld.track.Rhythm == nil {
+		return false
+	}
+	style := ld.track.Rhythm.Style
+	return style == "sixteenth" || style == "funk_16th" || style == "funk_muted"
 }
 
 // isFingerPickingStyle returns true if the rhythm style is fingerpicking
@@ -852,7 +904,12 @@ func (ld *LiveDisplay) renderBarLineWithFretboard(startBar int, currentBar int, 
 	leftContent = "  "
 	for i := startBar; i < endBar; i++ {
 		if i < len(ld.bars) {
-			beatDisplay := ld.formatBeatNumbers(i == currentBar, currentBeat, barWidth)
+			var beatDisplay string
+			if ld.isSixteenthNoteStyle() {
+				beatDisplay = ld.formatBeatNumbers16th(i == currentBar, currentBeat, barWidth)
+			} else {
+				beatDisplay = ld.formatBeatNumbers(i == currentBar, currentBeat, barWidth)
+			}
 			if i == currentBar {
 				leftContent += fmt.Sprintf("%s%s%s  ", colorGreen, beatDisplay, colorReset)
 			} else {

@@ -180,7 +180,8 @@ rhythm:
 | `half` | Two strums per bar | Ballads |
 | `quarter` | Four strums per bar | Folk, pop |
 | `eighth` | Eight strums per bar | Rock, pop |
-| `sixteenth` / `16th` | Sixteenth notes | Funk, disco |
+| `sixteenth` | Straight 16th note strumming | Funk, disco |
+| `funk_16th` | Funky 16ths with ghost notes | Funk, R&B |
 | `strum_down` | Arpeggiated downstrums | Acoustic rock |
 | `strum_up_down` | Alternating up/down | Pop, folk |
 | `folk` | Bass on 1,3 + chord on 2,4 | Country, folk |
@@ -193,7 +194,7 @@ rhythm:
 | `arpeggio_up` | Ascending arpeggio | Ambient, new wave |
 | `arpeggio_down` | Descending arpeggio | Ballads, post-punk |
 | `funk` | Syncopated 16th notes (heavy on the one) | Funk, R&B |
-| `funk_muted` / `funk_chop` | Muted/choppy funk | Funk rock |
+| `funk_muted` | Heavily muted/choppy funk | Funk rock |
 
 ### Custom Strum Patterns
 
@@ -708,15 +709,17 @@ export SOUNDFONT=~/soundfonts/FluidR3_GM.sf2
 
 ## Version
 
-BTML v0.5 - Backing Tracks Player
+BTML v0.6 - Backing Tracks Player
 
 Features:
 - Chord progressions with fractional bar notation and slash chords
 - Custom strum patterns (D/U/x/. notation)
+- 16th note rhythm styles (sixteenth, funk_16th, funk_muted)
 - Fingerpicking and funk rhythm styles
 - Multiple bass styles (root, walking, funk, 808)
 - Drum presets and Euclidean rhythms
 - Auto-generated melody with multiple styles
 - Scale display with fretboard visualization
+- Bubbletea TUI with three-column layout
 - Custom SoundFont support
 - MIDI and Strudel export

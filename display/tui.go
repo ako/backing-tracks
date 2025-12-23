@@ -162,10 +162,14 @@ func (m *TUIModel) updatePosition() {
 	m.currentBeat = totalBeats % 4
 	m.currentBar = totalBeats / 4
 
-	// Calculate strum position (8 strums per bar)
-	timePerStrum := m.timePerBeat / 2
+	// Calculate strum position (8 or 16 strums per bar)
+	strumsPerBar := 8
+	if m.isSixteenthNoteStyle() {
+		strumsPerBar = 16
+	}
+	timePerStrum := m.timePerBeat * 4 / time.Duration(strumsPerBar)
 	totalStrums := int(elapsed / timePerStrum)
-	m.currentStrum = totalStrums % 8
+	m.currentStrum = totalStrums % strumsPerBar
 }
 
 // View renders the TUI
@@ -317,6 +321,12 @@ func (m *TUIModel) renderStrumPattern(isCurrent bool) string {
 	pattern := m.getStrumPatternSymbols()
 	var result []string
 
+	// Use narrower spacing for 16th notes
+	spacing := "   "
+	if len(pattern) > 8 {
+		spacing = " "
+	}
+
 	for i, p := range pattern {
 		if isCurrent {
 			if i == m.currentStrum {
@@ -331,7 +341,7 @@ func (m *TUIModel) renderStrumPattern(isCurrent bool) string {
 		}
 	}
 
-	return " " + strings.Join(result, "   ")
+	return " " + strings.Join(result, spacing)
 }
 
 // getStrumPatternSymbols returns the strum pattern as symbols
@@ -347,6 +357,12 @@ func (m *TUIModel) getStrumPatternSymbols() []string {
 		return []string{"↓", ".", "↑", ".", "↓", ".", "↑", "."}
 	case "arpeggio_up", "arpeggio_down":
 		return []string{"↓", "↓", "↓", "↓", "↓", "↓", "↓", "↓"}
+	case "sixteenth":
+		return []string{"↓", ".", "↑", ".", "↓", ".", "↑", ".", "↓", ".", "↑", ".", "↓", ".", "↑", "."}
+	case "funk_16th":
+		return []string{"↓", ".", "x", ".", "↑", "x", "↓", ".", "x", ".", "↑", ".", "↓", "x", "↑", "."}
+	case "funk_muted":
+		return []string{"x", ".", "↓", ".", "x", ".", "↑", ".", "x", ".", "↓", ".", "x", ".", "↑", "."}
 	default:
 		return []string{"↓", ".", "↑", ".", "↓", ".", "↑", "."}
 	}
@@ -354,6 +370,10 @@ func (m *TUIModel) getStrumPatternSymbols() []string {
 
 // renderBeatNumbers renders the beat numbers
 func (m *TUIModel) renderBeatNumbers(isCurrent bool) string {
+	if m.isSixteenthNoteStyle() {
+		return m.renderBeatNumbers16th(isCurrent)
+	}
+
 	beats := []string{"1", "2", "3", "4"}
 	var result []string
 
@@ -368,6 +388,30 @@ func (m *TUIModel) renderBeatNumbers(isCurrent bool) string {
 	}
 
 	return " " + strings.Join(result, "       ")
+}
+
+// renderBeatNumbers16th renders beat numbers for 16th note patterns
+func (m *TUIModel) renderBeatNumbers16th(isCurrent bool) string {
+	// 16th note subdivisions: 1 e + a 2 e + a 3 e + a 4 e + a
+	beats := []string{"1", "e", "+", "a", "2", "e", "+", "a", "3", "e", "+", "a", "4", "e", "+", "a"}
+	var result []string
+
+	for i, b := range beats {
+		beatNum := i / 4 // Which quarter note beat (0-3)
+		if isCurrent {
+			if beatNum == m.currentBeat && i%4 == 0 {
+				result = append(result, currentBeatStyle.Render("●"))
+			} else if i == 0 && beatNum != m.currentBeat {
+				result = append(result, currentBeatStyle.Render("◉"))
+			} else {
+				result = append(result, beatStyle.Render(b))
+			}
+		} else {
+			result = append(result, beatStyle.Render(b))
+		}
+	}
+
+	return " " + strings.Join(result, " ")
 }
 
 // renderMiddleColumn renders the scale fretboard
@@ -458,6 +502,15 @@ func (m *TUIModel) renderRightColumn() string {
 	}
 
 	return strings.Join(lines, "\n")
+}
+
+// isSixteenthNoteStyle checks if current style uses 16th notes
+func (m *TUIModel) isSixteenthNoteStyle() bool {
+	if m.track.Rhythm == nil {
+		return false
+	}
+	style := m.track.Rhythm.Style
+	return style == "sixteenth" || style == "funk_16th" || style == "funk_muted"
 }
 
 // isFingerPickingStyle checks if current style is fingerpicking

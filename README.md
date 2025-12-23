@@ -1,4 +1,4 @@
-# Backing Tracks - v0.5
+# Backing Tracks - v0.6
 
 A terminal-based backing track player that uses the BTML (Backing Track Markup Language) DSL. Generate complete backing tracks with chords, bass, drums, and auto-generated melodies with real-time scale visualization!
 
@@ -155,6 +155,9 @@ chord_progression:
 | `half` | Two strums per bar | Ballads |
 | `quarter` | Four strums per bar | Pop, rock |
 | `eighth` | Eight strums per bar | Rock, punk |
+| `sixteenth` | 16th note strumming | Funk, disco |
+| `funk_16th` | Funky 16ths with ghost notes | Funk, R&B |
+| `funk_muted` | Heavily muted funk | Funk rock |
 | `strum_down` | Arpeggiated downstrum | Folk |
 | `strum_up_down` | Alternating strums | Pop, rock |
 | `folk` | Bass note + chord pattern | Folk, country |
@@ -309,8 +312,8 @@ backing-tracks/
 - **v0.3:** ✅ Drum patterns (presets + Euclidean rhythms)
 - **v0.4:** ✅ Live visual display with chord and beat tracking
 - **v0.5:** ✅ Scale display, chord charts, melody generation, Strudel export
-- **v0.6:** Mini-notation parser (Strudel-inspired)
-- **v0.7:** Interactive TUI with Bubbletea
+- **v0.6:** ✅ 16th note rhythms, Bubbletea TUI
+- **v0.7:** Mini-notation parser (Strudel-inspired)
 - **v0.8:** LLM integration for generating BTML from songs
 
 ## Dependencies
@@ -340,7 +343,13 @@ Contributions welcome! See `BTML_MANUAL.md` for the full BTML specification and 
 
 ## What's New
 
-**v0.5 (Current)**
+**v0.6 (Current)**
+- ✅ **16th note rhythm styles**: `sixteenth`, `funk_16th`, `funk_muted`
+- ✅ **Bubbletea TUI**: Proper terminal UI with Lipgloss styling
+- ✅ **Beat subdivision display**: Shows "1 e + a 2 e + a..." for 16th notes
+- ✅ **TTY detection**: Falls back to legacy display in non-terminal environments
+
+**v0.5**
 - ✅ **Guitar fretboard display** showing scale positions for improvisation
 - ✅ **Chord chart display** with finger positions (open + barre voicings)
 - ✅ **Auto-generated melody track** based on scale and chord tones

@@ -1,0 +1,35 @@
+# Funk 16th Notes
+# Demonstrates 16th note strumming patterns
+# Classic funk rhythm guitar - Chic / Nile Rodgers style
+
+track:
+  title: "Funk 16th Groove"
+  key: Em
+  tempo: 108
+  time_signature: 4/4
+  style: funk
+
+chord_progression:
+  # Tight funk vamp
+  pattern: "Em7 Em7 A7 A7 Em7 Em7 A7 A7"
+  bars_per_chord: 1
+  repeat: 4
+
+rhythm:
+  # 16th note funk strumming with ghost notes
+  style: funk_16th
+  accent: "1"
+
+bass:
+  style: funk
+  swing: 0.5
+
+drums:
+  style: funk
+  intensity: 0.8
+
+melody:
+  enabled: false
+
+scale:
+  type: pentatonic_minor
