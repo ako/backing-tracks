@@ -99,19 +99,25 @@ brew install fluid-synth
 ### Live Display
 
 During playback, you'll see:
-- Current chord displayed prominently
+- Current chord displayed prominently (with transpose indicator)
 - Visual metronome with beat indicators
 - Strum pattern visualization
-- **Guitar fretboard** showing the scale for improvisation
+- **Scale fretboard** showing positions for improvisation
+- **Chord tones fretboard** showing all positions for current chord notes
 - **Chord diagrams** with finger positions
+- Track mute status indicators
 - Progress bar through the progression
 
 **Playback Controls:**
 | Key | Action |
 |-----|--------|
 | `Space` | Pause / Resume |
-| `←` | Jump to previous bar |
-| `→` | Jump to next bar |
+| `←` / `→` | Jump to previous / next bar |
+| `↑` / `↓` | Transpose up / down by semitone |
+| `1` | Toggle drums mute |
+| `2` | Toggle bass mute |
+| `3` | Toggle chords mute |
+| `4` | Toggle melody mute |
 | `Q` / `Esc` | Quit |
 
 ![Live Display Screenshot](screenshot-player.png)
@@ -392,6 +398,9 @@ Contributions welcome! See:
 
 **v0.6 (Current)**
 - ✅ **Real-time playback controls**: Pause/resume (space), seek (←/→)
+- ✅ **Transpose controls**: Shift song up/down by semitones (↑/↓)
+- ✅ **Track mute controls**: Mute individual tracks with keys 1-4
+- ✅ **Chord tones fretboard**: Shows all positions for current chord notes
 - ✅ **Synced audio & display**: Controls affect both sound and visuals
 - ✅ **Multi-chord bar display**: Shows "Am7 → Am" for half-bar chords
 - ✅ **Pattern list support**: Chord patterns can be YAML lists
