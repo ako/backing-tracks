@@ -404,4 +404,4 @@ When adding features:
 
 **Last Updated:** 2025-12-23
 **Maintained By:** Human + Claude
-**License:** [To be determined - suggest MIT]
+**License:** MIT
