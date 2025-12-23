@@ -196,6 +196,14 @@ chord_progression:
 | `travis` | Travis picking pattern | Country, folk |
 | `fingerpick` | Folk fingerpicking | Singer-songwriter |
 | `fingerpick_slow` | Sparse fingerpicking | Ballads |
+| `pima` | P-i-m-a ascending pattern | Classical, folk |
+| `pima_reverse` | P-a-m-i descending pattern | Classical, ballads |
+| `classical` | P-i-m-i-a-i-m-i full pattern | Classical guitar |
+| `banjo_roll` | Forward roll (T-I-M) | Bluegrass, country |
+| `pinch` | Bass + treble pinch | Folk, country |
+| `dust_in_wind` | Continuous 16th notes | Kansas-style ballads |
+| `landslide` | Fleetwood Mac style | Folk rock |
+| `blackbird` | Walking bass fingerpicking | Beatles-style |
 | `arpeggio_up` | Ascending arpeggio | Classical, ambient |
 | `arpeggio_down` | Descending arpeggio | Classical, ballads |
 | `stride` | Chords on 2 & 4 | Ragtime, stride piano |

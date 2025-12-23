@@ -317,6 +317,38 @@ func generateRhythmPattern(style string, notes ChordVoicing, startTick, duration
 		// Slower, more sparse fingerpicking for ballads
 		events = append(events, slowFingerpick(notes, startTick, duration, ticksPerBar)...)
 
+	case "pima":
+		// Basic P-i-m-a ascending fingerpicking pattern
+		events = append(events, pimaPattern(notes, startTick, duration, ticksPerBar)...)
+
+	case "pima_reverse", "pami":
+		// P-a-m-i descending fingerpicking pattern
+		events = append(events, pimaReversePattern(notes, startTick, duration, ticksPerBar)...)
+
+	case "classical":
+		// Classical guitar P-i-m-i-a-i-m-i pattern
+		events = append(events, classicalPattern(notes, startTick, duration, ticksPerBar)...)
+
+	case "banjo_roll", "forward_roll":
+		// Bluegrass forward roll (T-I-M)
+		events = append(events, banjoRollPattern(notes, startTick, duration, ticksPerBar)...)
+
+	case "pinch":
+		// Pinch bass+treble together, pianistic effect
+		events = append(events, pinchPattern(notes, startTick, duration, ticksPerBar)...)
+
+	case "dust_in_wind", "kansas":
+		// Kansas "Dust in the Wind" style continuous 16ths
+		events = append(events, dustInWindPattern(notes, startTick, duration, ticksPerBar)...)
+
+	case "landslide":
+		// Fleetwood Mac "Landslide" style flowing pattern
+		events = append(events, landslidePattern(notes, startTick, duration, ticksPerBar)...)
+
+	case "blackbird":
+		// Beatles "Blackbird" style with walking bass
+		events = append(events, blackbirdPattern(notes, startTick, duration, ticksPerBar)...)
+
 	case "funk":
 		// Classic funk: 16th note pattern, heavy on the ONE, syncopated chops
 		events = append(events, funkRhythm(notes, startTick, duration, ticksPerBar, false)...)
@@ -908,6 +940,404 @@ func arpeggioPattern(notes ChordVoicing, startTick, duration, ticksPerBar uint32
 
 			events = append(events, midiEvent{tick, midi.NoteOn(0, notes[noteIdx], noteVel)})
 			events = append(events, midiEvent{tick + noteDuration, midi.NoteOff(0, notes[noteIdx])})
+		}
+	}
+
+	return events
+}
+
+// pimaPattern generates basic P-i-m-a ascending fingerpicking
+// Pattern: Bass, Index(G), Middle(B), Ring(e) - repeated
+func pimaPattern(notes ChordVoicing, startTick, duration, ticksPerBar uint32) []midiEvent {
+	events := []midiEvent{}
+	sixteenthNote := ticksPerBar / 16
+	numBars := duration / ticksPerBar
+	if numBars == 0 {
+		numBars = 1
+	}
+
+	if len(notes) < 3 {
+		return events
+	}
+
+	// Adapt to available notes (3 or 4+)
+	bass := notes[0]
+	index := notes[1]
+	middle := notes[2]
+	ring := notes[len(notes)-1] // For 3-note chords, this is notes[2]; for 4+, it's the top note
+
+	for bar := uint32(0); bar < numBars; bar++ {
+		barStart := startTick + bar*ticksPerBar
+
+		// P-i-m-a repeated 4 times per bar (16th notes)
+		for beat := 0; beat < 4; beat++ {
+			beatStart := barStart + uint32(beat*4)*sixteenthNote
+			pattern := []struct {
+				note uint8
+				vel  uint8
+			}{
+				{bass, 80},
+				{index, 60},
+				{middle, 60},
+				{ring, 55},
+			}
+			for i, p := range pattern {
+				tick := beatStart + uint32(i)*sixteenthNote
+				noteDuration := sixteenthNote * 2
+				events = append(events, midiEvent{tick, midi.NoteOn(0, p.note, p.vel)})
+				events = append(events, midiEvent{tick + noteDuration, midi.NoteOff(0, p.note)})
+			}
+		}
+	}
+
+	return events
+}
+
+// pimaReversePattern generates P-a-m-i descending fingerpicking
+func pimaReversePattern(notes ChordVoicing, startTick, duration, ticksPerBar uint32) []midiEvent {
+	events := []midiEvent{}
+	sixteenthNote := ticksPerBar / 16
+	numBars := duration / ticksPerBar
+	if numBars == 0 {
+		numBars = 1
+	}
+
+	if len(notes) < 3 {
+		return events
+	}
+
+	bass := notes[0]
+	index := notes[1]
+	middle := notes[2]
+	ring := notes[len(notes)-1] // For 3-note chords, this equals middle
+
+	for bar := uint32(0); bar < numBars; bar++ {
+		barStart := startTick + bar*ticksPerBar
+
+		// P-a-m-i repeated 4 times per bar
+		for beat := 0; beat < 4; beat++ {
+			beatStart := barStart + uint32(beat*4)*sixteenthNote
+			pattern := []struct {
+				note uint8
+				vel  uint8
+			}{
+				{bass, 80},
+				{ring, 55},
+				{middle, 60},
+				{index, 60},
+			}
+			for i, p := range pattern {
+				tick := beatStart + uint32(i)*sixteenthNote
+				noteDuration := sixteenthNote * 2
+				events = append(events, midiEvent{tick, midi.NoteOn(0, p.note, p.vel)})
+				events = append(events, midiEvent{tick + noteDuration, midi.NoteOff(0, p.note)})
+			}
+		}
+	}
+
+	return events
+}
+
+// classicalPattern generates the classical guitar P-i-m-i-a-i-m-i pattern
+// Used in classical guitar studies and pieces
+func classicalPattern(notes ChordVoicing, startTick, duration, ticksPerBar uint32) []midiEvent {
+	events := []midiEvent{}
+	eighthNote := ticksPerBar / 8
+	numBars := duration / ticksPerBar
+	if numBars == 0 {
+		numBars = 1
+	}
+
+	if len(notes) < 3 {
+		return events
+	}
+
+	bass := notes[0]
+	index := notes[1]
+	middle := notes[2]
+	ring := notes[len(notes)-1]
+
+	for bar := uint32(0); bar < numBars; bar++ {
+		barStart := startTick + bar*ticksPerBar
+
+		// P-i-m-i-a-i-m-i (8 eighth notes per bar)
+		pattern := []struct {
+			note uint8
+			vel  uint8
+		}{
+			{bass, 80},   // P
+			{index, 60},  // i
+			{middle, 60}, // m
+			{index, 55},  // i
+			{ring, 65},   // a
+			{index, 55},  // i
+			{middle, 60}, // m
+			{index, 55},  // i
+		}
+
+		for i, p := range pattern {
+			tick := barStart + uint32(i)*eighthNote
+			noteDuration := eighthNote - 20
+			events = append(events, midiEvent{tick, midi.NoteOn(0, p.note, p.vel)})
+			events = append(events, midiEvent{tick + noteDuration, midi.NoteOff(0, p.note)})
+		}
+	}
+
+	return events
+}
+
+// banjoRollPattern generates forward roll pattern (thumb-index-middle)
+// Common in bluegrass and folk
+func banjoRollPattern(notes ChordVoicing, startTick, duration, ticksPerBar uint32) []midiEvent {
+	events := []midiEvent{}
+	eighthNote := ticksPerBar / 8
+	numBars := duration / ticksPerBar
+	if numBars == 0 {
+		numBars = 1
+	}
+
+	if len(notes) < 3 {
+		return events
+	}
+
+	bass := notes[0]
+	mid := notes[len(notes)/2]
+	high := notes[len(notes)-1]
+
+	for bar := uint32(0); bar < numBars; bar++ {
+		barStart := startTick + bar*ticksPerBar
+
+		// Forward roll: T-I-M repeated, with bass alternation
+		// Pattern: B-M-H-B-M-H-B-M (T-I-M-T-I-M-T-I)
+		pattern := []struct {
+			note uint8
+			vel  uint8
+		}{
+			{bass, 80},
+			{mid, 65},
+			{high, 60},
+			{bass + 7, 75}, // Fifth for alternating bass
+			{mid, 65},
+			{high, 60},
+			{bass, 80},
+			{mid, 65},
+		}
+
+		for i, p := range pattern {
+			tick := barStart + uint32(i)*eighthNote
+			noteDuration := eighthNote - 15
+			events = append(events, midiEvent{tick, midi.NoteOn(0, p.note, p.vel)})
+			events = append(events, midiEvent{tick + noteDuration, midi.NoteOff(0, p.note)})
+		}
+	}
+
+	return events
+}
+
+// pinchPattern generates pinch harmonics - bass and treble together
+// Good for slow ballads, creates a pianistic effect
+func pinchPattern(notes ChordVoicing, startTick, duration, ticksPerBar uint32) []midiEvent {
+	events := []midiEvent{}
+	quarterNote := ticksPerBar / 4
+	numBars := duration / ticksPerBar
+	if numBars == 0 {
+		numBars = 1
+	}
+
+	if len(notes) < 3 {
+		return events
+	}
+
+	bass := notes[0]
+	mid := notes[len(notes)/2]
+	high := notes[len(notes)-1]
+
+	for bar := uint32(0); bar < numBars; bar++ {
+		barStart := startTick + bar*ticksPerBar
+
+		// Pinch on each beat: bass + high together, then mid fills
+		for beat := 0; beat < 4; beat++ {
+			beatStart := barStart + uint32(beat)*quarterNote
+			eighthNote := quarterNote / 2
+
+			// Pinch: bass + high together
+			events = append(events, midiEvent{beatStart, midi.NoteOn(0, bass, 80)})
+			events = append(events, midiEvent{beatStart, midi.NoteOn(0, high, 70)})
+			events = append(events, midiEvent{beatStart + quarterNote - 20, midi.NoteOff(0, bass)})
+			events = append(events, midiEvent{beatStart + quarterNote - 20, midi.NoteOff(0, high)})
+
+			// Mid note on the "and"
+			events = append(events, midiEvent{beatStart + eighthNote, midi.NoteOn(0, mid, 55)})
+			events = append(events, midiEvent{beatStart + eighthNote + eighthNote - 20, midi.NoteOff(0, mid)})
+		}
+	}
+
+	return events
+}
+
+// dustInWindPattern generates the iconic Dust in the Wind pattern
+// Kansas style: continuous 16th note arpeggiation
+func dustInWindPattern(notes ChordVoicing, startTick, duration, ticksPerBar uint32) []midiEvent {
+	events := []midiEvent{}
+	sixteenthNote := ticksPerBar / 16
+	numBars := duration / ticksPerBar
+	if numBars == 0 {
+		numBars = 1
+	}
+
+	if len(notes) < 3 {
+		return events
+	}
+
+	// Adapt to available notes
+	bass := notes[0]
+	low := notes[1]
+	mid := notes[1] // Default to same as low for 3-note chords
+	if len(notes) >= 3 {
+		mid = notes[2]
+	}
+	high := notes[len(notes)-1]
+
+	for bar := uint32(0); bar < numBars; bar++ {
+		barStart := startTick + bar*ticksPerBar
+
+		// The actual pattern: T-i-m-T-a-m-T-i-m-T-a-m-T-i-m-T
+		// Where T=thumb on different bass notes
+		pattern := []struct {
+			note uint8
+			vel  uint8
+		}{
+			{bass, 80},
+			{mid, 60},
+			{high, 55},
+			{low, 70},
+			{high, 55},
+			{mid, 60},
+			{bass, 75},
+			{mid, 60},
+			{high, 55},
+			{low, 70},
+			{high, 55},
+			{mid, 60},
+			{bass, 80},
+			{mid, 60},
+			{high, 55},
+			{low, 65},
+		}
+
+		for i, p := range pattern {
+			tick := barStart + uint32(i)*sixteenthNote
+			noteDuration := sixteenthNote * 3 // Let notes ring
+			events = append(events, midiEvent{tick, midi.NoteOn(0, p.note, p.vel)})
+			events = append(events, midiEvent{tick + noteDuration, midi.NoteOff(0, p.note)})
+		}
+	}
+
+	return events
+}
+
+// landslidePattern generates Fleetwood Mac "Landslide" style pattern
+// Flowing 16th notes with emphasis on melody in the picking
+func landslidePattern(notes ChordVoicing, startTick, duration, ticksPerBar uint32) []midiEvent {
+	events := []midiEvent{}
+	sixteenthNote := ticksPerBar / 16
+	numBars := duration / ticksPerBar
+	if numBars == 0 {
+		numBars = 1
+	}
+
+	if len(notes) < 3 {
+		return events
+	}
+
+	// Adapt to available notes
+	bass := notes[0]
+	low := notes[1]
+	mid := notes[1] // Default for 3-note chords
+	if len(notes) >= 3 {
+		mid = notes[2]
+	}
+	high := notes[len(notes)-1]
+
+	for bar := uint32(0); bar < numBars; bar++ {
+		barStart := startTick + bar*ticksPerBar
+
+		// Landslide-style flowing pattern
+		pattern := []struct {
+			note uint8
+			vel  uint8
+		}{
+			{bass, 80},
+			{mid, 55},
+			{high, 65},
+			{mid, 50},
+			{low, 70},
+			{mid, 55},
+			{high, 60},
+			{mid, 50},
+			{bass, 75},
+			{mid, 55},
+			{high, 65},
+			{mid, 50},
+			{low, 70},
+			{mid, 55},
+			{high, 60},
+			{mid, 50},
+		}
+
+		for i, p := range pattern {
+			tick := barStart + uint32(i)*sixteenthNote
+			noteDuration := sixteenthNote * 2
+			events = append(events, midiEvent{tick, midi.NoteOn(0, p.note, p.vel)})
+			events = append(events, midiEvent{tick + noteDuration, midi.NoteOff(0, p.note)})
+		}
+	}
+
+	return events
+}
+
+// blackbirdPattern generates Beatles "Blackbird" style two-finger picking
+// Melody on top with walking bass, McCartney style
+func blackbirdPattern(notes ChordVoicing, startTick, duration, ticksPerBar uint32) []midiEvent {
+	events := []midiEvent{}
+	eighthNote := ticksPerBar / 8
+	numBars := duration / ticksPerBar
+	if numBars == 0 {
+		numBars = 1
+	}
+
+	if len(notes) < 3 {
+		return events
+	}
+
+	bass := notes[0]
+	mid := notes[len(notes)/2]
+	high := notes[len(notes)-1]
+
+	for bar := uint32(0); bar < numBars; bar++ {
+		barStart := startTick + bar*ticksPerBar
+
+		// Blackbird uses thumb and one/two fingers, walking feel
+		// Pattern emphasizes melody on top
+		pattern := []struct {
+			note uint8
+			vel  uint8
+		}{
+			{bass, 75},
+			{high, 70},
+			{bass + 2, 70},
+			{high, 65},
+			{bass + 4, 70},
+			{mid, 60},
+			{bass + 5, 70},
+			{high, 70},
+		}
+
+		for i, p := range pattern {
+			tick := barStart + uint32(i)*eighthNote
+			noteDuration := eighthNote - 10
+			events = append(events, midiEvent{tick, midi.NoteOn(0, p.note, p.vel)})
+			events = append(events, midiEvent{tick + noteDuration, midi.NoteOff(0, p.note)})
 		}
 	}
 
