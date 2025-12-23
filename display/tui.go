@@ -512,7 +512,7 @@ func (m *TUIModel) renderBeatNumbers16th(isCurrent bool) string {
 	return " " + strings.Join(result, " ")
 }
 
-// renderMiddleColumn renders the scale fretboard
+// renderMiddleColumn renders the scale fretboard and chord tones fretboard
 func (m *TUIModel) renderMiddleColumn() string {
 	if m.fretboard == nil || m.currentScale == nil {
 		return ""
@@ -524,14 +524,10 @@ func (m *TUIModel) renderMiddleColumn() string {
 	lines = append(lines, lipgloss.NewStyle().Bold(true).Render(" "+m.currentScale.Name))
 	lines = append(lines, "")
 
-	// Fret numbers
-	fretLine := "    "
+	// Fret numbers (use 3-char columns for proper alignment with double digits)
+	fretLine := "   "
 	for fret := 0; fret <= 12; fret++ {
-		if fret < 10 {
-			fretLine += fmt.Sprintf("%d ", fret)
-		} else {
-			fretLine += fmt.Sprintf("%d", fret)
-		}
+		fretLine += fmt.Sprintf("%2d ", fret)
 	}
 	lines = append(lines, fretLine)
 
@@ -545,30 +541,137 @@ func (m *TUIModel) renderMiddleColumn() string {
 
 		for fret := 0; fret <= 12; fret++ {
 			if roots[stringIdx][fret] {
-				line += lipgloss.NewStyle().Foreground(rootColor).Render("◆ ")
+				line += lipgloss.NewStyle().Foreground(rootColor).Render(" ◆ ")
 			} else if positions[stringIdx][fret] {
-				line += lipgloss.NewStyle().Foreground(accentColor).Render("● ")
+				line += lipgloss.NewStyle().Foreground(accentColor).Render(" ● ")
 			} else {
-				line += "· "
+				line += " · "
 			}
 		}
 		lines = append(lines, line)
 	}
 
 	// Fret markers
-	markerLine := "    "
+	markerLine := "   "
 	for fret := 0; fret <= 12; fret++ {
 		if fret == 3 || fret == 5 || fret == 7 || fret == 9 {
-			markerLine += "· "
+			markerLine += " · "
 		} else if fret == 12 {
-			markerLine += ": "
+			markerLine += " : "
 		} else {
-			markerLine += "  "
+			markerLine += "   "
 		}
 	}
 	lines = append(lines, markerLine)
 
+	// Add chord tones fretboard
+	chordLines := m.renderChordTonesFretboard()
+	if len(chordLines) > 0 {
+		lines = append(lines, "")
+		lines = append(lines, chordLines...)
+	}
+
 	return strings.Join(lines, "\n")
+}
+
+// renderChordTonesFretboard renders a fretboard showing all positions for current chord tones
+func (m *TUIModel) renderChordTonesFretboard() []string {
+	// Get current chord
+	currentChord := m.getCurrentChordSymbol()
+	if currentChord == "" {
+		return nil
+	}
+
+	var lines []string
+
+	// Chord name header
+	lines = append(lines, lipgloss.NewStyle().Bold(true).Render(" "+currentChord+" Chord Tones"))
+	lines = append(lines, "")
+
+	// Get chord tones (returns slice of MIDI note offsets 0-11)
+	chordTones := theory.GetChordTones(currentChord)
+	if len(chordTones) == 0 {
+		return nil
+	}
+
+	// Create a map for quick lookup
+	toneMap := make(map[int]bool)
+	for _, tone := range chordTones {
+		toneMap[tone] = true
+	}
+
+	// Root note for highlighting
+	rootTone := chordTones[0]
+
+	// Standard tuning: E A D G B E (MIDI notes 40, 45, 50, 55, 59, 64)
+	openStrings := []int{40, 45, 50, 55, 59, 64} // Low E to high E
+
+	// Fret numbers
+	fretLine := "   "
+	for fret := 0; fret <= 12; fret++ {
+		fretLine += fmt.Sprintf("%2d ", fret)
+	}
+	lines = append(lines, fretLine)
+
+	// Strings (high to low for display)
+	stringNames := []string{"e", "B", "G", "D", "A", "E"}
+
+	for idx, name := range stringNames {
+		stringIdx := 5 - idx // Reverse to match display order
+		openNote := openStrings[stringIdx]
+		line := fmt.Sprintf(" %s ", name)
+
+		for fret := 0; fret <= 12; fret++ {
+			noteAtFret := (openNote + fret) % 12
+			if noteAtFret == rootTone {
+				// Root note - highlight in different color
+				line += lipgloss.NewStyle().Foreground(rootColor).Render(" ◆ ")
+			} else if toneMap[noteAtFret] {
+				// Chord tone
+				line += lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Render(" ● ") // Orange for chord tones
+			} else {
+				line += " · "
+			}
+		}
+		lines = append(lines, line)
+	}
+
+	// Fret markers
+	markerLine := "   "
+	for fret := 0; fret <= 12; fret++ {
+		if fret == 3 || fret == 5 || fret == 7 || fret == 9 {
+			markerLine += " · "
+		} else if fret == 12 {
+			markerLine += " : "
+		} else {
+			markerLine += "   "
+		}
+	}
+	lines = append(lines, markerLine)
+
+	return lines
+}
+
+// getCurrentChordSymbol returns the chord symbol for the current beat position
+func (m *TUIModel) getCurrentChordSymbol() string {
+	if m.currentBar >= len(m.bars) || len(m.bars) == 0 {
+		return ""
+	}
+	bar := m.bars[m.currentBar]
+	if len(bar.Chords) == 0 {
+		return ""
+	}
+
+	// Find the chord active at the current beat
+	for i := len(bar.Chords) - 1; i >= 0; i-- {
+		chord := bar.Chords[i]
+		if m.currentBeat >= chord.StartBeat {
+			return chord.Symbol
+		}
+	}
+
+	// Fallback to first chord
+	return bar.Chords[0].Symbol
 }
 
 // renderRightColumn renders the chord charts and picking pattern
@@ -623,10 +726,10 @@ func (m *TUIModel) renderRightColumn() string {
 				if lineIdx < len(diag) {
 					cell = diag[lineIdx]
 				}
-				// Pad to fixed width
-				cellRunes := []rune(cell)
-				if len(cellRunes) < chartWidth {
-					cell = cell + strings.Repeat(" ", chartWidth-len(cellRunes))
+				// Pad to fixed width (use lipgloss.Width to handle ANSI codes)
+				visualWidth := lipgloss.Width(cell)
+				if visualWidth < chartWidth {
+					cell = cell + strings.Repeat(" ", chartWidth-visualWidth)
 				}
 				rowLine += cell
 			}
@@ -643,8 +746,11 @@ func (m *TUIModel) isSixteenthNoteStyle() bool {
 	if m.track.Rhythm == nil {
 		return false
 	}
-	style := m.track.Rhythm.Style
-	return style == "sixteenth" || style == "funk_16th" || style == "funk_muted"
+	switch m.track.Rhythm.Style {
+	case "sixteenth", "funk_16th", "funk_muted", "dust_in_wind", "landslide", "pima", "pima_reverse":
+		return true
+	}
+	return false
 }
 
 // isFingerPickingStyle checks if current style is fingerpicking
@@ -730,15 +836,26 @@ func (m *TUIModel) renderChordDiagram(v ChordVoicing) []string {
 	}
 	lines = append(lines, lipgloss.NewStyle().Bold(true).Render(fmt.Sprintf(" %s [%s]", v.Name, tabStr)))
 
-	// String names
-	lines = append(lines, " E  A  D  G  B  e")
-
 	// Determine fret range
 	startFret := 1
 	if v.BaseFret > 0 {
 		startFret = v.BaseFret
 	}
 	endFret := startFret + 3
+
+	// Open/muted string indicators (above the nut)
+	indicatorLine := " "
+	for str := 0; str < 6; str++ {
+		f := v.Frets[str]
+		if f == -1 {
+			indicatorLine += "x  "
+		} else if f == 0 {
+			indicatorLine += "○  "
+		} else {
+			indicatorLine += "   "
+		}
+	}
+	lines = append(lines, indicatorLine)
 
 	// Nut or fret indicator
 	if startFret == 1 {
@@ -752,11 +869,7 @@ func (m *TUIModel) renderChordDiagram(v ChordVoicing) []string {
 		line := " "
 		for str := 0; str < 6; str++ {
 			f := v.Frets[str]
-			if f == -1 && fret == startFret {
-				line += "x  "
-			} else if f == 0 && fret == startFret {
-				line += "○  "
-			} else if f == fret {
+			if f == fret {
 				line += "●  "
 			} else {
 				line += "│  "

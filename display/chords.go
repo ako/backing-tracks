@@ -301,8 +301,19 @@ func (cc *ChordChart) RenderSingleChord(v ChordVoicing) []string {
 	}
 	endFret := startFret + 3
 
-	// String names line
-	lines = append(lines, " E  A  D  G  B  e")
+	// Open/muted string indicators (above the nut)
+	indicatorLine := " "
+	for str := 0; str < 6; str++ {
+		f := v.Frets[str]
+		if f == -1 {
+			indicatorLine += "x  "
+		} else if f == 0 {
+			indicatorLine += "○  "
+		} else {
+			indicatorLine += "   "
+		}
+	}
+	lines = append(lines, indicatorLine)
 
 	// Nut or fret number indicator
 	if startFret == 1 {
@@ -316,25 +327,9 @@ func (cc *ChordChart) RenderSingleChord(v ChordVoicing) []string {
 		line := " "
 		for str := 0; str < 6; str++ {
 			f := v.Frets[str]
-			if f == -1 {
-				// Muted string
-				if fret == startFret {
-					line += "x  "
-				} else {
-					line += "│  "
-				}
-			} else if f == 0 {
-				// Open string
-				if fret == startFret {
-					line += "○  "
-				} else {
-					line += "│  "
-				}
-			} else if f == fret {
-				// Finger position
+			if f == fret {
 				line += "●  "
 			} else {
-				// Empty fret
 				line += "│  "
 			}
 		}

@@ -313,8 +313,14 @@ func (p *RealtimePlayer) GetPlaybackState() (bar int, beat int, strum int, pause
 	bar = int(currentTick / p.playbackData.TicksPerBar)
 	beat = int((currentTick % p.playbackData.TicksPerBar) / ticksPerBeat)
 
-	// Calculate strum position (8 strums per bar for 8th notes, 16 for 16th)
-	strumsPerBar := 8
+	// Calculate strum position based on rhythm style
+	strumsPerBar := 8 // Default for 8th notes
+	if p.track != nil && p.track.Rhythm != nil {
+		switch p.track.Rhythm.Style {
+		case "sixteenth", "funk_16th", "funk_muted", "dust_in_wind", "landslide", "pima", "pima_reverse":
+			strumsPerBar = 16
+		}
+	}
 	ticksPerStrum := p.playbackData.TicksPerBar / uint32(strumsPerBar)
 	strum = int((currentTick % p.playbackData.TicksPerBar) / ticksPerStrum)
 
