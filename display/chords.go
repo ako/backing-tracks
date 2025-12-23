@@ -252,19 +252,19 @@ func (cc *ChordChart) RenderHorizontal(symbol string) []string {
 
 	// Show first voicing (main position)
 	v := voicings[0]
-	lines = append(lines, cc.renderSingleChord(v)...)
+	lines = append(lines, cc.RenderSingleChord(v)...)
 
 	// If there's a second voicing, show it too
 	if len(voicings) > 1 {
 		lines = append(lines, "") // spacer
-		lines = append(lines, cc.renderSingleChord(voicings[1])...)
+		lines = append(lines, cc.RenderSingleChord(voicings[1])...)
 	}
 
 	return lines
 }
 
-// renderSingleChord renders one chord voicing horizontally
-func (cc *ChordChart) renderSingleChord(v ChordVoicing) []string {
+// RenderSingleChord renders one chord voicing horizontally
+func (cc *ChordChart) RenderSingleChord(v ChordVoicing) []string {
 	lines := []string{}
 
 	// Chord name and tab notation

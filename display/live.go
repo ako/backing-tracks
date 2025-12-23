@@ -244,6 +244,63 @@ func (ld *LiveDisplay) run() {
 // Number of bar rows to show at once (scrolling window)
 const visibleRows = 4
 
+// getUniqueChords returns all unique chord symbols from the song
+func (ld *LiveDisplay) getUniqueChords() []string {
+	seen := make(map[string]bool)
+	var unique []string
+	for _, bar := range ld.bars {
+		for _, bc := range bar.Chords {
+			// Strip slash chord bass note for chart lookup
+			symbol := bc.Symbol
+			if idx := strings.Index(symbol, "/"); idx > 0 {
+				symbol = symbol[:idx]
+			}
+			if !seen[symbol] {
+				seen[symbol] = true
+				unique = append(unique, symbol)
+			}
+		}
+	}
+	return unique
+}
+
+// renderAllChordCharts renders chord charts for all unique chords in the song
+// For fingerpicking styles, also includes the picking pattern tablature
+func (ld *LiveDisplay) renderAllChordCharts() []string {
+	var lines []string
+
+	// Add fingerpicking pattern if applicable
+	if ld.isFingerPickingStyle() {
+		lines = append(lines, " Picking Pattern:")
+		lines = append(lines, ld.getFingerPickingPattern()...)
+		lines = append(lines, "")
+	}
+
+	if ld.chordChart == nil {
+		return lines
+	}
+
+	uniqueChords := ld.getUniqueChords()
+
+	for _, chord := range uniqueChords {
+		voicings := ld.chordChart.GetVoicings(chord)
+		if len(voicings) == 0 {
+			lines = append(lines, fmt.Sprintf(" %s: [no chart]", chord))
+			lines = append(lines, "")
+			continue
+		}
+
+		// Show all voicings for this chord
+		for _, v := range voicings {
+			chordLines := ld.chordChart.RenderSingleChord(v)
+			lines = append(lines, chordLines...)
+			lines = append(lines, "") // spacer between voicings
+		}
+	}
+
+	return lines
+}
+
 // renderFull renders the initial display
 func (ld *LiveDisplay) renderFull() {
 	// Clear screen
@@ -275,11 +332,8 @@ func (ld *LiveDisplay) renderFull() {
 		fretLines = ld.fretboard.Render()
 	}
 
-	// Get chord chart lines for initial chord
-	chordLines := []string{}
-	if ld.chordChart != nil && ld.currentChord != "" {
-		chordLines = ld.chordChart.RenderHorizontal(ld.currentChord)
-	}
+	// Get chord charts for ALL unique chords in the song
+	chordLines := ld.renderAllChordCharts()
 
 	// Combine fretboard and chord chart
 	rightPanelLines := append(fretLines, chordLines...)
@@ -353,11 +407,8 @@ func (ld *LiveDisplay) render() {
 		fretLines = ld.fretboard.Render()
 	}
 
-	// Get chord chart lines for current chord
-	chordLines := []string{}
-	if ld.chordChart != nil && ld.currentChord != "" {
-		chordLines = ld.chordChart.RenderHorizontal(ld.currentChord)
-	}
+	// Get chord charts for ALL unique chords in the song
+	chordLines := ld.renderAllChordCharts()
 
 	// Combine fretboard and chord chart
 	rightPanelLines := append(fretLines, chordLines...)
@@ -406,6 +457,36 @@ const (
 	colorYellow = "\033[33m"
 	colorGreen  = "\033[32m"
 )
+
+// visibleLength returns the visible length of a string, ignoring ANSI codes
+func visibleLength(s string) int {
+	// Remove ANSI escape sequences
+	inEscape := false
+	visible := 0
+	for _, r := range s {
+		if r == '\033' {
+			inEscape = true
+			continue
+		}
+		if inEscape {
+			if r == 'm' {
+				inEscape = false
+			}
+			continue
+		}
+		visible++
+	}
+	return visible
+}
+
+// padToWidth pads a string to the given visible width
+func padToWidth(s string, width int) string {
+	visLen := visibleLength(s)
+	if visLen >= width {
+		return s
+	}
+	return s + strings.Repeat(" ", width-visLen)
+}
 
 // renderBarLine renders a line of bars (2 bars per line)
 func (ld *LiveDisplay) renderBarLine(startBar int, currentBar int, currentBeat int, currentStrum int) {
@@ -597,48 +678,136 @@ func (ld *LiveDisplay) formatBeatNumbers(isCurrentBar bool, currentBeat int, wid
 	return display
 }
 
-// renderBarLineWithFretboard renders a bar line with fretboard on the right
-func (ld *LiveDisplay) renderBarLineWithFretboard(startBar int, currentBar int, currentBeat int, currentStrum int, fretLines []string, rowIndex int) {
+// isFingerPickingStyle returns true if the rhythm style is fingerpicking
+func (ld *LiveDisplay) isFingerPickingStyle() bool {
+	if ld.track.Rhythm == nil {
+		return false
+	}
+	style := ld.track.Rhythm.Style
+	return style == "fingerpick" || style == "fingerpick_slow" || style == "travis" ||
+		style == "arpeggio_up" || style == "arpeggio_down"
+}
+
+// getFingerPickingPattern returns tablature lines for fingerpicking
+func (ld *LiveDisplay) getFingerPickingPattern() []string {
+	if ld.track.Rhythm == nil {
+		return []string{}
+	}
+
+	style := ld.track.Rhythm.Style
+	switch style {
+	case "fingerpick_slow":
+		// Slow fingerpick: p i m a pattern, sparse
+		return []string{
+			"e|----0-------0---|",
+			"B|------0-------0-|",
+			"G|--0-------0-----|",
+			"D|----------------|",
+			"A|----------------|",
+			"E|0-------0-------|",
+		}
+	case "fingerpick":
+		// Standard fingerpick: continuous 16th pattern
+		return []string{
+			"e|----0---0---0---|",
+			"B|------0---0---0-|",
+			"G|--0---0---0---0-|",
+			"D|----------------|",
+			"A|----------------|",
+			"E|0---0---0---0---|",
+		}
+	case "travis":
+		// Travis picking: alternating bass with melody
+		return []string{
+			"e|------0---0-----|",
+			"B|----0---0---0---|",
+			"G|--0-------0-----|",
+			"D|----------------|",
+			"A|----0-------0---|",
+			"E|0-------0-------|",
+		}
+	case "arpeggio_up":
+		// Ascending arpeggio
+		return []string{
+			"e|------0---------|",
+			"B|----0-----------|",
+			"G|--0-------------|",
+			"D|0---------------|",
+			"A|----------------|",
+			"E|----------------|",
+		}
+	case "arpeggio_down":
+		// Descending arpeggio
+		return []string{
+			"e|0---------------|",
+			"B|--0-------------|",
+			"G|----0-----------|",
+			"D|------0---------|",
+			"A|----------------|",
+			"E|----------------|",
+		}
+	default:
+		return []string{}
+	}
+}
+
+// renderBarLineWithFretboard renders a bar line with three columns:
+// Left: chord/beat display, Middle: scale fretboard, Right: chord charts
+func (ld *LiveDisplay) renderBarLineWithFretboard(startBar int, currentBar int, currentBeat int, currentStrum int, rightPanelLines []string, rowIndex int) {
 	endBar := startBar + ld.barsPerLine
 	if endBar > len(ld.bars) {
 		endBar = len(ld.bars)
 	}
 
-	barWidth := 31 // Width for each bar content
-	leftWidth := (barWidth + 2) * ld.barsPerLine + 2 // Total left side width
+	barWidth := 32 // Full width for each bar (fits longer lyrics)
+	leftColWidth := (barWidth + 2) * ld.barsPerLine
+	middleColWidth := 42 // Width for scale fretboard
 
-	// Calculate which fretboard lines to show for this row
-	// Each bar row is 5 lines, fretboard has about 10 lines
-	// Show fretboard lines spread across the rows
+	// Calculate line offsets for each column (5 lines per display row)
 	fretStartLine := rowIndex * 5
-	if fretStartLine >= len(fretLines) {
-		fretStartLine = 0
+
+	// Get scale lines (middle column)
+	scaleLines := []string{}
+	if ld.showFretboard && ld.fretboard != nil {
+		scaleLines = ld.fretboard.Render()
+	}
+
+	// Get chord chart lines (right column) - already in rightPanelLines after scale
+	chordChartStart := len(scaleLines)
+	chordLines := []string{}
+	if chordChartStart < len(rightPanelLines) {
+		chordLines = rightPanelLines[chordChartStart:]
+	}
+
+	// Helper to get line from slice safely
+	getLine := func(lines []string, idx int) string {
+		if idx >= 0 && idx < len(lines) {
+			return lines[idx]
+		}
+		return ""
 	}
 
 	// Line 1: Chord names
-	fmt.Print("  ")
+	leftContent := "  "
 	for i := startBar; i < endBar; i++ {
 		if i < len(ld.bars) {
 			chordStr := ld.formatBarChords(ld.bars[i], barWidth)
 			if i == currentBar {
-				fmt.Printf("%s%s%s%s  ", colorBold, colorCyan, chordStr, colorReset)
+				leftContent += fmt.Sprintf("%s%s%s%s  ", colorBold, colorCyan, chordStr, colorReset)
 			} else {
-				fmt.Printf("%s  ", chordStr)
+				leftContent += fmt.Sprintf("%s  ", chordStr)
 			}
 		}
 	}
-	// Add fretboard line on right
-	if ld.showFretboard && fretStartLine < len(fretLines) {
-		padNeeded := leftWidth - (barWidth+2)*(endBar-startBar) - 2
-		if padNeeded > 0 {
-			fmt.Print(strings.Repeat(" ", padNeeded))
-		}
-		fmt.Printf("    │  %s", fretLines[fretStartLine])
-	}
+	fmt.Print(padToWidth(leftContent, leftColWidth+2))
+	fmt.Print(" │ ")
+	fmt.Print(padToWidth(getLine(scaleLines, fretStartLine), middleColWidth))
+	fmt.Print(" │ ")
+	fmt.Print(getLine(chordLines, fretStartLine))
 	fmt.Print("\033[K\n")
 
 	// Line 2: Lyrics
-	fmt.Print("  ")
+	leftContent = "  "
 	for i := startBar; i < endBar; i++ {
 		if i < len(ld.bars) {
 			lyrics := ld.bars[i].Lyrics
@@ -647,72 +816,133 @@ func (ld *LiveDisplay) renderBarLineWithFretboard(startBar int, currentBar int, 
 			}
 			padded := fmt.Sprintf("%-*s", barWidth, lyrics)
 			if i == currentBar && lyrics != "" {
-				fmt.Printf("%s%s%s%s  ", colorBold, colorYellow, padded, colorReset)
+				leftContent += fmt.Sprintf("%s%s%s%s  ", colorBold, colorYellow, padded, colorReset)
 			} else {
-				fmt.Printf("%s  ", padded)
+				leftContent += fmt.Sprintf("%s  ", padded)
 			}
 		}
 	}
-	// Add fretboard line on right
-	if ld.showFretboard && fretStartLine+1 < len(fretLines) {
-		padNeeded := leftWidth - (barWidth+2)*(endBar-startBar) - 2
-		if padNeeded > 0 {
-			fmt.Print(strings.Repeat(" ", padNeeded))
-		}
-		fmt.Printf("    │  %s", fretLines[fretStartLine+1])
-	}
+	fmt.Print(padToWidth(leftContent, leftColWidth+2))
+	fmt.Print(" │ ")
+	fmt.Print(padToWidth(getLine(scaleLines, fretStartLine+1), middleColWidth))
+	fmt.Print(" │ ")
+	fmt.Print(getLine(chordLines, fretStartLine+1))
 	fmt.Print("\033[K\n")
 
 	// Line 3: Strum pattern
-	fmt.Print("  ")
+	leftContent = "  "
 	for i := startBar; i < endBar; i++ {
 		if i < len(ld.bars) {
 			strumDisplay := ld.formatStrumPattern(i == currentBar, currentStrum, barWidth)
 			if i == currentBar {
-				fmt.Printf("%s%s%s  ", colorGreen, strumDisplay, colorReset)
+				leftContent += fmt.Sprintf("%s%s%s  ", colorGreen, strumDisplay, colorReset)
 			} else {
-				fmt.Printf("%s%s%s  ", colorDim, strumDisplay, colorReset)
+				leftContent += fmt.Sprintf("%s%s%s  ", colorDim, strumDisplay, colorReset)
 			}
 		}
 	}
-	// Add fretboard line on right
-	if ld.showFretboard && fretStartLine+2 < len(fretLines) {
-		padNeeded := leftWidth - (barWidth+2)*(endBar-startBar) - 2
-		if padNeeded > 0 {
-			fmt.Print(strings.Repeat(" ", padNeeded))
-		}
-		fmt.Printf("    │  %s", fretLines[fretStartLine+2])
-	}
+	fmt.Print(padToWidth(leftContent, leftColWidth+2))
+	fmt.Print(" │ ")
+	fmt.Print(padToWidth(getLine(scaleLines, fretStartLine+2), middleColWidth))
+	fmt.Print(" │ ")
+	fmt.Print(getLine(chordLines, fretStartLine+2))
 	fmt.Print("\033[K\n")
 
 	// Line 4: Beat numbers
-	fmt.Print("  ")
+	leftContent = "  "
 	for i := startBar; i < endBar; i++ {
 		if i < len(ld.bars) {
 			beatDisplay := ld.formatBeatNumbers(i == currentBar, currentBeat, barWidth)
 			if i == currentBar {
-				fmt.Printf("%s%s%s  ", colorGreen, beatDisplay, colorReset)
+				leftContent += fmt.Sprintf("%s%s%s  ", colorGreen, beatDisplay, colorReset)
 			} else {
-				fmt.Printf("%s%s%s  ", colorDim, beatDisplay, colorReset)
+				leftContent += fmt.Sprintf("%s%s%s  ", colorDim, beatDisplay, colorReset)
 			}
 		}
 	}
-	// Add fretboard line on right
-	if ld.showFretboard && fretStartLine+3 < len(fretLines) {
-		padNeeded := leftWidth - (barWidth+2)*(endBar-startBar) - 2
-		if padNeeded > 0 {
-			fmt.Print(strings.Repeat(" ", padNeeded))
-		}
-		fmt.Printf("    │  %s", fretLines[fretStartLine+3])
-	}
+	fmt.Print(padToWidth(leftContent, leftColWidth+2))
+	fmt.Print(" │ ")
+	fmt.Print(padToWidth(getLine(scaleLines, fretStartLine+3), middleColWidth))
+	fmt.Print(" │ ")
+	fmt.Print(getLine(chordLines, fretStartLine+3))
 	fmt.Print("\033[K\n")
 
 	// Line 5: Separator
-	fmt.Print("  ")
-	fmt.Print(strings.Repeat("─", (barWidth+2)*ld.barsPerLine))
-	// Add fretboard line on right
-	if ld.showFretboard && fretStartLine+4 < len(fretLines) {
-		fmt.Printf("    │  %s", fretLines[fretStartLine+4])
-	}
+	leftContent = "  " + strings.Repeat("─", (barWidth+2)*ld.barsPerLine)
+	fmt.Print(padToWidth(leftContent, leftColWidth+2))
+	fmt.Print(" │ ")
+	fmt.Print(padToWidth(getLine(scaleLines, fretStartLine+4), middleColWidth))
+	fmt.Print(" │ ")
+	fmt.Print(getLine(chordLines, fretStartLine+4))
 	fmt.Print("\033[K\n")
+}
+
+// formatBarChordsCompact formats chord names in compact form
+func (ld *LiveDisplay) formatBarChordsCompact(bar Bar, width int) string {
+	if len(bar.Chords) == 0 {
+		return strings.Repeat(" ", width)
+	}
+
+	if len(bar.Chords) == 1 {
+		chord := bar.Chords[0].Symbol
+		padding := (width - len(chord)) / 2
+		if padding < 0 {
+			padding = 0
+		}
+		result := fmt.Sprintf("%s%s", strings.Repeat(" ", padding), chord)
+		if len(result) < width {
+			result += strings.Repeat(" ", width-len(result))
+		}
+		return result
+	}
+
+	// Multiple chords
+	parts := []string{}
+	for _, bc := range bar.Chords {
+		parts = append(parts, bc.Symbol)
+	}
+	result := strings.Join(parts, "|")
+	if len(result) < width {
+		padding := (width - len(result)) / 2
+		result = strings.Repeat(" ", padding) + result + strings.Repeat(" ", width-padding-len(result))
+	}
+	return result
+}
+
+// formatBeatDots formats beat position as dots
+func (ld *LiveDisplay) formatBeatDots(isCurrentBar bool, currentBeat int, width int) string {
+	var result []string
+	for i := 0; i < 4; i++ {
+		if isCurrentBar && i == currentBeat {
+			result = append(result, "█")
+		} else if isCurrentBar && i < currentBeat {
+			result = append(result, "·")
+		} else {
+			result = append(result, ".")
+		}
+	}
+	display := strings.Join(result, "   ")
+	if len(display) < width {
+		display = display + strings.Repeat(" ", width-len(display))
+	}
+	return display
+}
+
+// formatBeatNumbersCompact formats beat numbers compactly
+func (ld *LiveDisplay) formatBeatNumbersCompact(isCurrentBar bool, currentBeat int, width int) string {
+	beats := []string{"1", "2", "3", "4"}
+	var result []string
+	for i, b := range beats {
+		if isCurrentBar && i == currentBeat {
+			result = append(result, "●")
+		} else {
+			result = append(result, b)
+		}
+	}
+	display := strings.Join(result, "   ")
+	runeCount := utf8.RuneCountInString(display)
+	if runeCount < width {
+		display = display + strings.Repeat(" ", width-runeCount)
+	}
+	return display
 }

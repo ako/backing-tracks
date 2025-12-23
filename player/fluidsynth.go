@@ -1,6 +1,7 @@
 package player
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -9,9 +10,12 @@ import (
 
 	"backing-tracks/display"
 	"backing-tracks/parser"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"golang.org/x/term"
 )
 
-// PlayMIDIWithDisplay plays a MIDI file using FluidSynth with live visual display
+// PlayMIDIWithDisplay plays a MIDI file using FluidSynth with live TUI display
 func PlayMIDIWithDisplay(midiFile string, track *parser.Track, customSoundFont string) error {
 	// Check if FluidSynth is installed
 	if _, err := exec.LookPath("fluidsynth"); err != nil {
@@ -27,21 +31,89 @@ func PlayMIDIWithDisplay(midiFile string, track *parser.Track, customSoundFont s
 	fmt.Printf("Using SoundFont: %s\n", soundFont)
 	fmt.Println()
 
-	// Create and start live display
+	// Check if we have a TTY - if not, use legacy display
+	if !term.IsTerminal(int(os.Stdin.Fd())) {
+		return playWithLegacyDisplay(midiFile, track, soundFont)
+	}
+
+	// Create TUI model
+	tuiModel := display.NewTUIModel(track)
+
+	// Create context for cancellation
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Channel to signal when FluidSynth finishes
+	done := make(chan error, 1)
+
+	// Build FluidSynth command with context
+	cmd := exec.CommandContext(ctx, "fluidsynth",
+		"-ni",         // No interactive mode
+		"-q",          // Quiet mode
+		"-r", "48000", // Sample rate
+		"-g", "1.0",   // Gain
+		soundFont,
+		midiFile,
+	)
+
+	// Discard stdout/stderr to keep display clean
+	cmd.Stdout = io.Discard
+	cmd.Stderr = io.Discard
+
+	// Start FluidSynth in background
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("failed to start fluidsynth: %w", err)
+	}
+
+	// Wait for FluidSynth in goroutine
+	go func() {
+		done <- cmd.Wait()
+	}()
+
+	// Run the TUI
+	p := tea.NewProgram(tuiModel, tea.WithAltScreen())
+
+	// Run TUI in goroutine
+	tuiDone := make(chan error, 1)
+	go func() {
+		_, err := p.Run()
+		tuiDone <- err
+	}()
+
+	// Wait for either FluidSynth to finish or TUI to quit
+	select {
+	case err := <-done:
+		// FluidSynth finished - stop TUI
+		p.Send(tea.Quit())
+		<-tuiDone
+		if err != nil && !tuiModel.IsQuitting() {
+			return fmt.Errorf("fluidsynth error: %w", err)
+		}
+	case err := <-tuiDone:
+		// TUI quit (user pressed q) - stop FluidSynth
+		cancel()
+		<-done
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// playWithLegacyDisplay uses the old ANSI-based display (for non-TTY environments)
+func playWithLegacyDisplay(midiFile string, track *parser.Track, soundFont string) error {
+	// Create and start legacy live display
 	liveDisplay := display.NewLiveDisplay(track)
 	liveDisplay.Start()
 	defer liveDisplay.Stop()
 
 	// Build FluidSynth command
-	// -ni: no interactive mode
-	// -r 48000: sample rate
-	// -g 1.0: gain
-	// -q: quiet mode (suppress FluidSynth output)
 	cmd := exec.Command("fluidsynth",
-		"-ni",           // No interactive mode
-		"-q",            // Quiet mode
-		"-r", "48000",   // Sample rate
-		"-g", "1.0",     // Gain
+		"-ni",         // No interactive mode
+		"-q",          // Quiet mode
+		"-r", "48000", // Sample rate
+		"-g", "1.0",   // Gain
 		soundFont,
 		midiFile,
 	)
