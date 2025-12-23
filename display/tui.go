@@ -69,6 +69,10 @@ type PlayerController interface {
 	SeekRelative(bars int)
 	GetPlaybackState() (bar int, beat int, strum int, paused bool)
 	IsPaused() bool
+	Transpose(semitones int)
+	GetTranspose() int
+	ToggleTrackMute(track int) // 0=drums, 1=bass, 2=chords, 3=melody
+	IsTrackMuted(track int) bool
 }
 
 // TUIModel is the Bubbletea model for live display
@@ -93,12 +97,13 @@ type TUIModel struct {
 	height int
 
 	// State
-	playing      bool
-	paused       bool
-	pausedAt     time.Time
-	pausedTotal  time.Duration
-	seekOffset   time.Duration // For seeking forward/backward
-	quitting     bool
+	playing         bool
+	paused          bool
+	pausedAt        time.Time
+	pausedTotal     time.Duration
+	seekOffset      time.Duration // For seeking forward/backward
+	transposeOffset int           // Semitones to transpose (+/-)
+	quitting        bool
 
 	// Audio player (optional - for synced playback)
 	player PlayerController
@@ -192,6 +197,44 @@ func (m *TUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.seekOffset += timePerBar
 				}
 			}
+		case "up":
+			// Transpose up one semitone
+			if m.player != nil {
+				m.player.Transpose(1)
+				m.transposeOffset = m.player.GetTranspose()
+			} else {
+				m.transposeOffset++
+			}
+			m.updateTransposedScale()
+		case "down":
+			// Transpose down one semitone
+			if m.player != nil {
+				m.player.Transpose(-1)
+				m.transposeOffset = m.player.GetTranspose()
+			} else {
+				m.transposeOffset--
+			}
+			m.updateTransposedScale()
+		case "1":
+			// Toggle drums
+			if m.player != nil {
+				m.player.ToggleTrackMute(0)
+			}
+		case "2":
+			// Toggle bass
+			if m.player != nil {
+				m.player.ToggleTrackMute(1)
+			}
+		case "3":
+			// Toggle chords
+			if m.player != nil {
+				m.player.ToggleTrackMute(2)
+			}
+		case "4":
+			// Toggle melody
+			if m.player != nil {
+				m.player.ToggleTrackMute(3)
+			}
 		}
 
 	case tea.WindowSizeMsg:
@@ -277,8 +320,46 @@ func (m *TUIModel) View() string {
 // renderHeader renders the title and track info
 func (m *TUIModel) renderHeader() string {
 	title := titleStyle.Render(m.track.Info.Title)
+
+	// Show transposed key if transpose is active
+	displayKey := m.track.Info.Key
+	if m.transposeOffset != 0 {
+		displayKey = transposeChord(m.track.Info.Key, m.transposeOffset)
+	}
+
 	info := headerStyle.Render(fmt.Sprintf("%s | %d BPM | %s",
-		m.track.Info.Key, m.track.Info.Tempo, m.track.Info.Style))
+		displayKey, m.track.Info.Tempo, m.track.Info.Style))
+
+	// Show transpose indicator
+	transposeIndicator := ""
+	if m.transposeOffset != 0 {
+		sign := "+"
+		if m.transposeOffset < 0 {
+			sign = ""
+		}
+		transposeIndicator = lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("#FF00FF")).
+			Render(fmt.Sprintf("  [%s%d]", sign, m.transposeOffset))
+	}
+
+	// Show track mute status
+	muteIndicator := ""
+	if m.player != nil {
+		trackNames := []string{"Dr", "Ba", "Ch", "Me"}
+		var mutedTracks []string
+		for i := 0; i < 4; i++ {
+			if m.player.IsTrackMuted(i) {
+				mutedTracks = append(mutedTracks, trackNames[i])
+			}
+		}
+		if len(mutedTracks) > 0 {
+			muteIndicator = lipgloss.NewStyle().
+				Bold(true).
+				Foreground(lipgloss.Color("#FF6666")).
+				Render(fmt.Sprintf("  [MUTE: %s]", strings.Join(mutedTracks, ",")))
+		}
+	}
 
 	scaleName := ""
 	if m.currentScale != nil {
@@ -286,14 +367,14 @@ func (m *TUIModel) renderHeader() string {
 	}
 
 	pauseIndicator := ""
-	if m.paused {
+	if m.paused || (m.player != nil && m.player.IsPaused()) {
 		pauseIndicator = lipgloss.NewStyle().
 			Bold(true).
 			Foreground(lipgloss.Color("#FF6600")).
-			Render("  ⏸ PAUSED (space to resume)")
+			Render("  ⏸ PAUSED")
 	}
 
-	return fmt.Sprintf("  %s    %s%s%s", title, info, scaleName, pauseIndicator)
+	return fmt.Sprintf("  %s    %s%s%s%s%s", title, info, transposeIndicator, muteIndicator, scaleName, pauseIndicator)
 }
 
 // renderLeftColumn renders the chord/beat display
@@ -385,19 +466,26 @@ func (m *TUIModel) renderBarRow(startBar int) string {
 	return strings.Join(lines, "\n")
 }
 
-// getBarChordName returns the chord name(s) for a bar
+// getBarChordName returns the chord name(s) for a bar (with transpose applied)
 func (m *TUIModel) getBarChordName(barIdx int) string {
 	if barIdx >= len(m.bars) || len(m.bars[barIdx].Chords) == 0 {
 		return ""
 	}
 	bar := m.bars[barIdx]
 	if len(bar.Chords) == 1 {
+		if m.transposeOffset != 0 {
+			return transposeChord(bar.Chords[0].Symbol, m.transposeOffset)
+		}
 		return bar.Chords[0].Symbol
 	}
-	// Multiple chords in this bar - show all
+	// Multiple chords in this bar - show all (transposed)
 	var names []string
 	for _, bc := range bar.Chords {
-		names = append(names, bc.Symbol)
+		name := bc.Symbol
+		if m.transposeOffset != 0 {
+			name = transposeChord(name, m.transposeOffset)
+		}
+		names = append(names, name)
 	}
 	return strings.Join(names, " → ")
 }
@@ -652,7 +740,7 @@ func (m *TUIModel) renderChordTonesFretboard() []string {
 	return lines
 }
 
-// getCurrentChordSymbol returns the chord symbol for the current beat position
+// getCurrentChordSymbol returns the chord symbol for the current beat position (transposed)
 func (m *TUIModel) getCurrentChordSymbol() string {
 	if m.currentBar >= len(m.bars) || len(m.bars) == 0 {
 		return ""
@@ -663,15 +751,84 @@ func (m *TUIModel) getCurrentChordSymbol() string {
 	}
 
 	// Find the chord active at the current beat
+	var symbol string
 	for i := len(bar.Chords) - 1; i >= 0; i-- {
 		chord := bar.Chords[i]
 		if m.currentBeat >= chord.StartBeat {
-			return chord.Symbol
+			symbol = chord.Symbol
+			break
 		}
 	}
+	if symbol == "" {
+		symbol = bar.Chords[0].Symbol
+	}
 
-	// Fallback to first chord
-	return bar.Chords[0].Symbol
+	// Apply transpose
+	if m.transposeOffset != 0 {
+		return transposeChord(symbol, m.transposeOffset)
+	}
+	return symbol
+}
+
+// transposeChord transposes a chord symbol by the given number of semitones
+func transposeChord(symbol string, semitones int) string {
+	if symbol == "" {
+		return ""
+	}
+
+	// Note names in order
+	noteNames := []string{"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"}
+	flatNames := []string{"C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"}
+
+	// Parse the root note
+	var root string
+	var remainder string
+	useFlats := false
+
+	if len(symbol) >= 2 && (symbol[1] == '#' || symbol[1] == 'b') {
+		root = symbol[:2]
+		remainder = symbol[2:]
+		useFlats = symbol[1] == 'b'
+	} else {
+		root = symbol[:1]
+		remainder = symbol[1:]
+	}
+
+	// Find root index
+	rootUpper := strings.ToUpper(root)
+	rootIdx := -1
+	for i, n := range noteNames {
+		if n == rootUpper || flatNames[i] == rootUpper {
+			rootIdx = i
+			break
+		}
+	}
+	if rootIdx == -1 {
+		return symbol // Can't transpose, return as-is
+	}
+
+	// Transpose
+	newIdx := (rootIdx + semitones%12 + 12) % 12
+
+	// Get new root name
+	var newRoot string
+	if useFlats {
+		newRoot = flatNames[newIdx]
+	} else {
+		newRoot = noteNames[newIdx]
+	}
+
+	return newRoot + remainder
+}
+
+// updateTransposedScale updates the scale display when transpose changes
+func (m *TUIModel) updateTransposedScale() {
+	// Get the transposed key
+	originalKey := m.track.Info.Key
+	transposedKey := transposeChord(originalKey, m.transposeOffset)
+
+	// Update the scale
+	m.currentScale = theory.GetScaleForStyle(transposedKey, m.track.Info.Style, "")
 }
 
 // renderRightColumn renders the chord charts and picking pattern
@@ -895,7 +1052,7 @@ func (m *TUIModel) renderProgressBar() string {
 	filled := int(progress * float64(width))
 	bar := strings.Repeat("▓", filled) + strings.Repeat("░", width-filled)
 
-	controls := headerStyle.Render("  [space] pause  [←/→] seek  [q] quit")
+	controls := headerStyle.Render("  [space] pause  [←/→] seek  [↑/↓] transpose  [1-4] mute tracks  [q] quit")
 
 	return fmt.Sprintf("  %s  %d%% (bar %d/%d)%s",
 		progressStyle.Render(bar),

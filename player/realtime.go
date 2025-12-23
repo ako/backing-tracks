@@ -21,18 +21,21 @@ type RealtimePlayer struct {
 	track        *parser.Track
 
 	// Playback state
-	mu            sync.Mutex
-	playing       bool
-	paused        bool
-	startTime     time.Time
-	pausedAt      time.Time
-	pausedTotal   time.Duration
-	seekOffset    time.Duration
-	lastEventIdx  int
-	activeNotes   map[noteKey]bool // Track active notes for cleanup
+	mu              sync.Mutex
+	playing         bool
+	paused          bool
+	startTime       time.Time
+	pausedAt        time.Time
+	pausedTotal     time.Duration
+	seekOffset      time.Duration
+	lastEventIdx    int
+	activeNotes     map[noteKey]bool // Track active notes for cleanup
+	transposeOffset int              // Semitones to transpose
+	mutedTracks     [4]bool          // 0=drums, 1=bass, 2=chords, 3=melody
 
 	// Control channels
 	stopChan chan struct{}
+	stopOnce sync.Once
 }
 
 type noteKey struct {
@@ -156,12 +159,41 @@ func (p *RealtimePlayer) playbackLoop() {
 
 // playEvent sends a single event to FluidSynth
 func (p *RealtimePlayer) playEvent(evt midi.PlaybackEvent) {
-	key := noteKey{evt.Channel, evt.Note}
+	// Check if track is muted
+	// Channel mapping: 9=drums(0), 1=bass(1), 0=chords(2), 2=melody(3)
+	trackIdx := -1
+	switch evt.Channel {
+	case 9:
+		trackIdx = 0 // drums
+	case 1:
+		trackIdx = 1 // bass
+	case 0:
+		trackIdx = 2 // chords
+	case 2:
+		trackIdx = 3 // melody
+	}
+	if trackIdx >= 0 && p.mutedTracks[trackIdx] {
+		return // Skip muted track
+	}
+
+	// Apply transpose (except for drums on channel 9)
+	note := evt.Note
+	if evt.Channel != 9 && p.transposeOffset != 0 {
+		transposed := int(note) + p.transposeOffset
+		if transposed < 0 {
+			transposed = 0
+		} else if transposed > 127 {
+			transposed = 127
+		}
+		note = uint8(transposed)
+	}
+
+	key := noteKey{evt.Channel, note}
 	if evt.IsNoteOn {
-		p.sendCommand(fmt.Sprintf("noteon %d %d %d", evt.Channel, evt.Note, evt.Velocity))
+		p.sendCommand(fmt.Sprintf("noteon %d %d %d", evt.Channel, note, evt.Velocity))
 		p.activeNotes[key] = true
 	} else {
-		p.sendCommand(fmt.Sprintf("noteoff %d %d", evt.Channel, evt.Note))
+		p.sendCommand(fmt.Sprintf("noteoff %d %d", evt.Channel, note))
 		delete(p.activeNotes, key)
 	}
 }
@@ -271,6 +303,71 @@ func (p *RealtimePlayer) IsPaused() bool {
 	return p.paused
 }
 
+// Transpose adjusts the transpose offset by the given semitones
+func (p *RealtimePlayer) Transpose(semitones int) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	// Stop all current notes before changing transpose
+	for key := range p.activeNotes {
+		p.sendCommand(fmt.Sprintf("noteoff %d %d", key.channel, key.note))
+	}
+	p.activeNotes = make(map[noteKey]bool)
+
+	p.transposeOffset += semitones
+}
+
+// GetTranspose returns the current transpose offset in semitones
+func (p *RealtimePlayer) GetTranspose() int {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.transposeOffset
+}
+
+// ToggleTrackMute toggles mute state for a track (0=drums, 1=bass, 2=chords, 3=melody)
+func (p *RealtimePlayer) ToggleTrackMute(track int) {
+	if track < 0 || track > 3 {
+		return
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	p.mutedTracks[track] = !p.mutedTracks[track]
+
+	// If muting, stop all notes on that channel
+	if p.mutedTracks[track] {
+		// Map track to channel
+		var channel uint8
+		switch track {
+		case 0:
+			channel = 9 // drums
+		case 1:
+			channel = 1 // bass
+		case 2:
+			channel = 0 // chords
+		case 3:
+			channel = 2 // melody
+		}
+		// Stop notes on this channel
+		for key := range p.activeNotes {
+			if key.channel == channel {
+				p.sendCommand(fmt.Sprintf("noteoff %d %d", key.channel, key.note))
+				delete(p.activeNotes, key)
+			}
+		}
+	}
+}
+
+// IsTrackMuted returns whether a track is muted (0=drums, 1=bass, 2=chords, 3=melody)
+func (p *RealtimePlayer) IsTrackMuted(track int) bool {
+	if track < 0 || track > 3 {
+		return false
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.mutedTracks[track]
+}
+
 // allNotesOff sends note-off for all channels
 func (p *RealtimePlayer) allNotesOff() {
 	// Turn off any active notes
@@ -287,11 +384,28 @@ func (p *RealtimePlayer) allNotesOff() {
 
 // Stop stops playback and cleans up
 func (p *RealtimePlayer) Stop() {
-	close(p.stopChan)
+	p.stopOnce.Do(func() {
+		close(p.stopChan)
+	})
+
 	p.allNotesOff()
 	p.sendCommand("quit")
 	p.stdin.Close()
-	p.cmd.Wait()
+
+	// Wait for FluidSynth with timeout
+	done := make(chan error, 1)
+	go func() {
+		done <- p.cmd.Wait()
+	}()
+
+	select {
+	case <-done:
+		// FluidSynth exited normally
+	case <-time.After(2 * time.Second):
+		// Timeout - force kill
+		p.cmd.Process.Kill()
+		<-done
+	}
 }
 
 // GetPlaybackState returns current playback state for TUI sync
