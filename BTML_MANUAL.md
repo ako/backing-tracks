@@ -2,7 +2,7 @@
 
 ## User & LLM Manual
 
-BTML is a YAML-based notation for defining complete backing tracks with chords, rhythm patterns, bass lines, and drums. This manual serves as both user documentation and LLM instructions for generating backing tracks.
+BTML is a YAML-based notation for defining complete backing tracks with chords, rhythm patterns, bass lines, drums, and melody. This manual serves as both user documentation and LLM instructions for generating backing tracks.
 
 ---
 
@@ -30,6 +30,14 @@ bass:
 drums:
   style: rock_beat
   intensity: 0.7
+
+melody:
+  enabled: true
+  style: moderate
+  density: 0.5
+
+scale:
+  type: pentatonic_minor
 ```
 
 ---
@@ -45,6 +53,8 @@ A BTML file has these sections:
 | `rhythm` | No | How chords are played (strum/pick pattern) |
 | `bass` | No | Bass line style |
 | `drums` | No | Drum pattern |
+| `melody` | No | Auto-generated melody line |
+| `scale` | No | Scale override for display/melody |
 
 ---
 
@@ -56,7 +66,7 @@ track:
   key: C                    # Musical key (C, G, Am, F#, Bb, etc.)
   tempo: 120                # BPM (beats per minute)
   time_signature: 4/4       # Currently only 4/4 supported
-  style: rock               # Genre hint (rock, blues, jazz, folk, pop, ballad)
+  style: rock               # Genre hint (rock, blues, jazz, folk, pop, ballad, funk, edm)
 ```
 
 ### Common Tempos by Genre
@@ -65,8 +75,10 @@ track:
 | Slow ballad | 50-70 |
 | Blues | 60-90 |
 | Folk | 80-110 |
+| Funk | 90-110 |
 | Pop | 100-130 |
 | Rock | 110-140 |
+| EDM | 120-140 |
 | Fast rock | 140-180 |
 
 ---
@@ -89,8 +101,23 @@ chord_progression:
 | `A7`, `E7`, `D7` | Dominant 7th | A dominant 7 |
 | `Cmaj7`, `Gmaj7` | Major 7th | C major 7 |
 | `Am7`, `Em7` | Minor 7th | A minor 7 |
+| `E9`, `A9` | Dominant 9th | E dominant 9 |
 | `E5`, `A5`, `G5` | Power chord | E power chord |
+| `Asus4`, `Dsus4` | Suspended 4th | A sus 4 |
+| `Asus2`, `Dsus2` | Suspended 2nd | A sus 2 |
+| `E7sus4` | Dominant 7 sus 4 | E7 suspended |
 | `Bb`, `F#`, `Eb` | Accidentals | B flat major |
+
+### Slash Chords (Bass Note)
+
+Specify a different bass note using slash notation:
+
+```yaml
+pattern: "Am Am/G Am/F Am/E"    # Descending bass line
+pattern: "C/E F G C"            # C with E in bass
+```
+
+The note after `/` becomes the bass note while the chord voicing stays the same.
 
 ### Inline Duration Notation
 
@@ -124,6 +151,12 @@ pattern: "G C G D"
 
 # Minor Ballad
 pattern: "Am G F E"
+
+# Funk Vamp
+pattern: "E9 E9 E9 E9 A9 E9 E9 E9"
+
+# Descending Bass (Stairway/Babe I'm Gonna Leave You)
+pattern: "Am Am/G Am/F Am/E"
 ```
 
 ---
@@ -147,15 +180,20 @@ rhythm:
 | `half` | Two strums per bar | Ballads |
 | `quarter` | Four strums per bar | Folk, pop |
 | `eighth` | Eight strums per bar | Rock, pop |
+| `sixteenth` / `16th` | Sixteenth notes | Funk, disco |
 | `strum_down` | Arpeggiated downstrums | Acoustic rock |
 | `strum_up_down` | Alternating up/down | Pop, folk |
 | `folk` | Bass on 1,3 + chord on 2,4 | Country, folk |
 | `shuffle_strum` | Triplet shuffle | Blues, swing |
+| `stride` | Stride piano pattern | Jazz, ragtime |
+| `ragtime` | Classic ragtime | Ragtime |
 | `travis` | Travis picking (alternating bass) | Fingerstyle, country |
 | `fingerpick` | 16th note fingerpicking | Folk, classical |
 | `fingerpick_slow` | Sparse picking | Ballads, Leonard Cohen |
-| `arpeggio_up` | Ascending arpeggio | Ambient, classical |
-| `arpeggio_down` | Descending arpeggio | Ballads |
+| `arpeggio_up` | Ascending arpeggio | Ambient, new wave |
+| `arpeggio_down` | Descending arpeggio | Ballads, post-punk |
+| `funk` | Syncopated 16th notes (heavy on the one) | Funk, R&B |
+| `funk_muted` / `funk_chop` | Muted/choppy funk | Funk rock |
 
 ### Custom Strum Patterns
 
@@ -238,10 +276,16 @@ bass:
 
 | Style | Description | Best For |
 |-------|-------------|----------|
-| `root` | Root notes only | Pop, rock, simple |
+| `root` | Root notes only | Pop, rock, ballads |
 | `root_fifth` | Root on 1, fifth on 3 | Folk, country, rock |
 | `walking` | Root-3rd-5th-7th pattern | Jazz, blues |
 | `swing_walking` | Walking with swing feel | Blues, jazz |
+| `stride` | Stride piano bass (octave jumps) | Jazz, ragtime |
+| `boogie` | Boogie-woogie pattern | Blues rock, boogie |
+| `808` / `sub` | Heavy sustained sub bass | EDM, trap, hip-hop |
+| `808_octave` / `edm` | Sub bass with octave jumps | EDM, house |
+| `funk` / `slap` | Syncopated slap bass | Funk, R&B |
+| `funk_simple` | Simpler funk bass | Funk soul |
 
 ---
 
@@ -261,6 +305,10 @@ drums:
 | `shuffle` | Blues shuffle with triplet feel |
 | `blues_shuffle` | Driving blues with ghost notes & open hi-hat |
 | `jazz_swing` | Ride pattern with sparse kick/snare |
+| `four_on_floor` / `edm` | Four kicks per bar with 16th hi-hats |
+| `trap` | Trap-style with rolling hi-hats and 808 kick |
+| `funk` | Tight funk groove |
+| `kick_only` | Minimal kick drum only |
 
 ### Custom Drum Patterns
 
@@ -303,6 +351,53 @@ euclidean:
 
 ---
 
+## Melody Section
+
+Auto-generate a melody line that follows the chord progression:
+
+```yaml
+melody:
+  enabled: true             # Turn on melody generation
+  style: moderate           # Complexity level
+  density: 0.5              # 0.0-1.0, how sparse/dense
+  octave: 4                 # Base octave (default 4)
+```
+
+### Melody Styles
+
+| Style | Description | Best For |
+|-------|-------------|----------|
+| `simple` | Half/whole notes, chord tones | Ballads, learning |
+| `moderate` | Quarter notes, passing tones | Pop, rock |
+| `active` | Eighth notes, more motion | Jazz, funk |
+| `blues_head` | Classic AAB 12-bar blues vocal | Blues |
+| `call_response` | Same as blues_head | Blues |
+
+---
+
+## Scale Section
+
+Override the auto-detected scale for fretboard display and melody generation:
+
+```yaml
+scale:
+  type: pentatonic_minor    # Scale type
+```
+
+### Scale Types
+
+| Type | Notes | Best For |
+|------|-------|----------|
+| `pentatonic_minor` | 1-b3-4-5-b7 | Blues, rock solos |
+| `pentatonic_major` | 1-2-3-5-6 | Country, pop |
+| `blues` | 1-b3-4-#4-5-b7 | Blues |
+| `natural_minor` | 1-2-b3-4-5-b6-b7 | Minor keys |
+| `natural_major` | 1-2-3-4-5-6-7 | Major keys |
+| `dorian` | 1-2-b3-4-5-6-b7 | Jazz, funk |
+| `mixolydian` | 1-2-3-4-5-6-b7 | Dominant chords, rock |
+
+---
+
 ## Complete Examples
 
 ### Blues in A
@@ -331,6 +426,49 @@ bass:
 drums:
   style: blues_shuffle
   intensity: 0.7
+
+melody:
+  enabled: true
+  style: blues_head
+  density: 0.6
+
+scale:
+  type: blues
+```
+
+### 70s Funk
+
+```yaml
+track:
+  title: "70s Funk in E"
+  key: E
+  tempo: 100
+  time_signature: 4/4
+  style: funk
+
+chord_progression:
+  pattern: "E9 E9 E9 E9 E9 E9 A9 E9"
+  bars_per_chord: 1
+  repeat: 4
+
+rhythm:
+  style: funk
+  accent: "1"
+
+bass:
+  style: slap
+
+drums:
+  style: funk
+  intensity: 0.85
+
+melody:
+  enabled: true
+  style: active
+  density: 0.6
+
+scale:
+  type: mixolydian
 ```
 
 ### Folk Fingerpicking
@@ -360,57 +498,60 @@ drums:
   intensity: 0.2
 ```
 
-### Rock with Custom Strum
+### EDM/808
 
 ```yaml
 track:
-  title: "Power Rock"
-  key: E
-  tempo: 130
+  title: "EDM Drop"
+  key: Am
+  tempo: 128
   time_signature: 4/4
-  style: rock
+  style: edm
 
 chord_progression:
-  pattern: "E5 G5 A5 E5"
+  pattern: "Am F C G"
   bars_per_chord: 2
   repeat: 4
 
 rhythm:
-  pattern: "DxDxDxDx"
+  style: sixteenth
 
 bass:
-  style: root_fifth
+  style: 808
+
+drums:
+  style: four_on_floor
+  intensity: 0.9
+
+melody:
+  enabled: true
+  style: active
+  density: 0.7
+```
+
+### Descending Bass Ballad
+
+```yaml
+track:
+  title: "Folk Rock Ballad"
+  key: Am
+  tempo: 134
+  time_signature: 4/4
+  style: folk
+
+chord_progression:
+  pattern: "Am Am/G Am/F Am/E Am Am/G D E"
+  bars_per_chord: 1
+  repeat: 4
+
+rhythm:
+  style: arpeggio_down
+
+bass:
+  style: root
 
 drums:
   style: rock_beat
-  intensity: 0.9
-```
-
-### Jazz with Walking Bass
-
-```yaml
-track:
-  title: "Jazz Standards"
-  key: Bb
-  tempo: 140
-  time_signature: 4/4
-  style: jazz
-
-chord_progression:
-  pattern: "Cm7 F7 Bbmaj7 Bbmaj7"
-  bars_per_chord: 2
-  repeat: 4
-
-rhythm:
-  pattern: "D..Ud..U"
-  swing: 0.67
-
-bass:
-  style: walking
-  swing: 0.67
-
-drums:
-  style: jazz_swing
   intensity: 0.6
 ```
 
@@ -425,11 +566,13 @@ When generating BTML files, follow these guidelines:
 | Genre | Rhythm | Bass | Drums | Tempo |
 |-------|--------|------|-------|-------|
 | Blues | shuffle_strum, swing 0.67 | walking/swing_walking | blues_shuffle/shuffle | 60-90 |
-| Jazz | custom pattern, swing 0.67 | walking | jazz_swing | 120-180 |
+| Jazz | custom pattern, swing 0.67 | walking/stride | jazz_swing | 120-180 |
 | Folk | fingerpick/travis/folk | root/root_fifth | minimal or none | 80-110 |
 | Pop | eighth/strum_up_down | root | rock_beat | 100-130 |
-| Rock | custom DxDx patterns | root_fifth | rock_beat | 110-150 |
+| Rock | eighth or DxDx patterns | root_fifth | rock_beat | 110-150 |
 | Ballad | fingerpick_slow/arpeggio | root | minimal | 50-80 |
+| Funk | funk/funk_muted | funk/slap | funk | 90-110 |
+| EDM | sixteenth | 808/edm | four_on_floor/trap | 120-140 |
 
 ### 2. Use Appropriate Chord Types
 
@@ -439,7 +582,9 @@ When generating BTML files, follow these guidelines:
 | Jazz | 7th chords (Cm7, F7, Bbmaj7) |
 | Folk | Major/minor triads |
 | Rock | Power chords (E5, A5) or triads |
-| Pop | Major/minor triads |
+| Pop | Major/minor triads, some 7ths |
+| Funk | 9th chords (E9, A9), 7ths |
+| EDM | Minor triads, simple progressions |
 
 ### 3. Set Intensity Appropriately
 
@@ -455,14 +600,14 @@ When generating BTML files, follow these guidelines:
 **Verse-Chorus (repeat 4x):**
 ```yaml
 repeat: 4
-# 4 chords × 4 repeats = 16 bars
+# 4 chords x 4 repeats = 16 bars
 ```
 
 **12-Bar Blues (repeat 2x):**
 ```yaml
 pattern: "A7 A7 A7 A7 D7 D7 A7 A7 E7 D7 A7 E7"
 repeat: 2
-# 12 bars × 2 = 24 bars
+# 12 bars x 2 = 24 bars
 ```
 
 **32-Bar Form:**
@@ -470,7 +615,7 @@ repeat: 2
 pattern: "..." # 8 chords
 bars_per_chord: 2
 repeat: 2
-# 8 × 2 × 2 = 32 bars
+# 8 x 2 x 2 = 32 bars
 ```
 
 ### 5. Creating Specific Feels
@@ -480,6 +625,8 @@ repeat: 2
 tempo: 60
 rhythm:
   style: fingerpick_slow
+bass:
+  style: root
 drums:
   intensity: 0.25
 ```
@@ -489,16 +636,35 @@ drums:
 tempo: 130
 rhythm:
   pattern: "DxDxDxDx"
+bass:
+  style: root_fifth
 drums:
   intensity: 0.9
 ```
 
-**Laid-back Soul:**
+**Funk Groove:**
 ```yaml
-tempo: 85
+tempo: 100
 rhythm:
-  pattern: "D.d.D.dU"
-  swing: 0.55
+  style: funk
+  accent: "1"
+bass:
+  style: slap
+drums:
+  style: funk
+  intensity: 0.85
+```
+
+**80s New Wave:**
+```yaml
+tempo: 126
+rhythm:
+  style: arpeggio_up
+bass:
+  style: root_fifth
+drums:
+  style: rock_beat
+  intensity: 0.7
 ```
 
 ---
@@ -509,23 +675,48 @@ rhythm:
 # Play a backing track
 ./backing-tracks play examples/blues-a.btml
 
+# Play with custom SoundFont
+./backing-tracks play --soundfont ~/soundfonts/SGM.sf2 examples/blues-a.btml
+
 # Export to MIDI file
 ./backing-tracks export examples/blues-a.btml
 
 # Export with custom output path
 ./backing-tracks export examples/blues-a.btml my-track.mid
+
+# Export to Strudel code
+./backing-tracks strudel examples/blues-a.btml
+
+# List available SoundFonts
+./backing-tracks soundfonts
 ```
+
+### Environment Variables
+
+```bash
+# Set default SoundFont
+export SOUNDFONT=~/soundfonts/FluidR3_GM.sf2
+```
+
+### SoundFont Tips
+
+- Place `.sf2` files in `./soundfonts/` directory for auto-detection
+- Set `SOUNDFONT` env var for a permanent default
+- Use `--soundfont` flag to override for specific playback
 
 ---
 
 ## Version
 
-BTML v0.4 - Backing Tracks Player
+BTML v0.5 - Backing Tracks Player
 
 Features:
-- Chord progressions with fractional bar notation
+- Chord progressions with fractional bar notation and slash chords
 - Custom strum patterns (D/U/x/. notation)
-- Fingerpicking styles (travis, fingerpick, fingerpick_slow)
-- Multiple bass styles (root, walking, swing)
+- Fingerpicking and funk rhythm styles
+- Multiple bass styles (root, walking, funk, 808)
 - Drum presets and Euclidean rhythms
-- MIDI export for DAW integration
+- Auto-generated melody with multiple styles
+- Scale display with fretboard visualization
+- Custom SoundFont support
+- MIDI and Strudel export
