@@ -1,0 +1,31 @@
+# Ska - Madness/Doe Maar Style
+# Driving offbeat "skank" rhythm
+
+track:
+  title: "Ska Groove"
+  key: F
+  tempo: 160
+  time_signature: 4/4
+  style: ska
+
+chord_progression:
+  # Classic ska changes
+  pattern: "F F Bb Bb C C F F"
+  bars_per_chord: 1
+  repeat: 4
+
+rhythm:
+  style: ska
+
+bass:
+  style: ska
+
+drums:
+  style: ska
+  intensity: 0.8
+
+melody:
+  enabled: false
+
+scale:
+  type: natural_major

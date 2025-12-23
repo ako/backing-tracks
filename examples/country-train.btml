@@ -1,0 +1,31 @@
+# Country Train Beat
+# Classic boom-chick pattern
+
+track:
+  title: "Country Train"
+  key: G
+  tempo: 120
+  time_signature: 4/4
+  style: country
+
+chord_progression:
+  # Classic country changes
+  pattern: "G G C C D D G G"
+  bars_per_chord: 1
+  repeat: 4
+
+rhythm:
+  style: country
+
+bass:
+  style: country
+
+drums:
+  style: country
+  intensity: 0.75
+
+melody:
+  enabled: false
+
+scale:
+  type: natural_major

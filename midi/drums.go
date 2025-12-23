@@ -200,6 +200,30 @@ func generatePresetPattern(style string, totalBars int, ticksPerBar uint32, velo
 			// Trap: rolling hihats, sparse kick, heavy snare
 			notes = append(notes, trapBeat(barStartTick, ticksPerBar, velocity)...)
 
+		case "ska":
+			// Ska: driving offbeat feel
+			notes = append(notes, skaBeat(barStartTick, ticksPerBar, velocity)...)
+
+		case "reggae", "one_drop":
+			// Reggae one-drop: kick and snare on beat 3
+			notes = append(notes, reggaeBeat(barStartTick, ticksPerBar, velocity)...)
+
+		case "country", "train":
+			// Country train beat
+			notes = append(notes, countryBeat(barStartTick, ticksPerBar, velocity)...)
+
+		case "disco":
+			// Classic disco beat
+			notes = append(notes, discoBeat(barStartTick, ticksPerBar, velocity)...)
+
+		case "motown", "soul":
+			// Motown/Soul beat
+			notes = append(notes, motownBeat(barStartTick, ticksPerBar, velocity)...)
+
+		case "flamenco", "rumba":
+			// Flamenco rumba (cajon style)
+			notes = append(notes, flamencoBeat(barStartTick, ticksPerBar, velocity)...)
+
 		default:
 			// Simple 4/4 beat
 			notes = append(notes, rockBeat(barStartTick, ticksPerBar, velocity)...)
@@ -419,6 +443,211 @@ func trapBeat(startTick, ticksPerBar uint32, velocity uint8) []DrumNote {
 			Note:     ClosedHihat,
 			Tick:     startTick + h.offset,
 			Velocity: uint8(int(velocity) - 20 + h.velocity),
+		})
+	}
+
+	return notes
+}
+
+// skaBeat generates a ska beat - driving offbeat feel
+func skaBeat(startTick, ticksPerBar uint32, velocity uint8) []DrumNote {
+	notes := []DrumNote{}
+	eighthNote := ticksPerBar / 8
+
+	// Kick: beats 1 and 3
+	notes = append(notes, DrumNote{Note: KickDrum, Tick: startTick, Velocity: velocity + 10})
+	notes = append(notes, DrumNote{Note: KickDrum, Tick: startTick + ticksPerBar/2, Velocity: velocity + 10})
+
+	// Snare: beats 2 and 4 (backbeat)
+	notes = append(notes, DrumNote{Note: SnareDrum, Tick: startTick + ticksPerBar/4, Velocity: velocity + 5})
+	notes = append(notes, DrumNote{Note: SnareDrum, Tick: startTick + 3*ticksPerBar/4, Velocity: velocity + 5})
+
+	// Hi-hat: driving 8th notes with accents on offbeats
+	for i := 0; i < 8; i++ {
+		vel := velocity - 15
+		if i%2 == 1 {
+			vel = velocity - 5 // Accent offbeats (the skank)
+		}
+		notes = append(notes, DrumNote{
+			Note:     ClosedHihat,
+			Tick:     startTick + uint32(i)*eighthNote,
+			Velocity: uint8(vel),
+		})
+	}
+
+	return notes
+}
+
+// reggaeBeat generates a reggae one-drop beat
+func reggaeBeat(startTick, ticksPerBar uint32, velocity uint8) []DrumNote {
+	notes := []DrumNote{}
+	quarterNote := ticksPerBar / 4
+	eighthNote := ticksPerBar / 8
+
+	// One-drop: kick AND snare together on beat 3 only
+	notes = append(notes, DrumNote{Note: KickDrum, Tick: startTick + 2*quarterNote, Velocity: velocity + 15})
+	notes = append(notes, DrumNote{Note: SnareDrum, Tick: startTick + 2*quarterNote, Velocity: velocity + 10})
+
+	// Cross-stick on beat 4 (optional accent)
+	notes = append(notes, DrumNote{Note: SnareDrum, Tick: startTick + 3*quarterNote, Velocity: velocity - 20})
+
+	// Hi-hat: sparse, offbeat focused
+	// Play on the "and" of each beat
+	for i := 0; i < 8; i++ {
+		if i%2 == 1 { // Only offbeats
+			notes = append(notes, DrumNote{
+				Note:     ClosedHihat,
+				Tick:     startTick + uint32(i)*eighthNote,
+				Velocity: velocity - 10,
+			})
+		}
+	}
+
+	return notes
+}
+
+// countryBeat generates a country train beat
+func countryBeat(startTick, ticksPerBar uint32, velocity uint8) []DrumNote {
+	notes := []DrumNote{}
+	quarterNote := ticksPerBar / 4
+	eighthNote := ticksPerBar / 8
+
+	// Kick: beats 1 and 3
+	notes = append(notes, DrumNote{Note: KickDrum, Tick: startTick, Velocity: velocity + 10})
+	notes = append(notes, DrumNote{Note: KickDrum, Tick: startTick + 2*quarterNote, Velocity: velocity + 10})
+
+	// Snare: beats 2 and 4 (strong backbeat)
+	notes = append(notes, DrumNote{Note: SnareDrum, Tick: startTick + quarterNote, Velocity: velocity + 5})
+	notes = append(notes, DrumNote{Note: SnareDrum, Tick: startTick + 3*quarterNote, Velocity: velocity + 5})
+
+	// Hi-hat: steady 8th notes (train rhythm)
+	for i := 0; i < 8; i++ {
+		vel := velocity - 15
+		if i%2 == 0 {
+			vel = velocity - 10 // Slightly accent downbeats
+		}
+		notes = append(notes, DrumNote{
+			Note:     ClosedHihat,
+			Tick:     startTick + uint32(i)*eighthNote,
+			Velocity: uint8(vel),
+		})
+	}
+
+	return notes
+}
+
+// discoBeat generates a classic disco beat
+func discoBeat(startTick, ticksPerBar uint32, velocity uint8) []DrumNote {
+	notes := []DrumNote{}
+	quarterNote := ticksPerBar / 4
+	sixteenthNote := ticksPerBar / 16
+
+	// Four-on-the-floor kick
+	for beat := 0; beat < 4; beat++ {
+		notes = append(notes, DrumNote{
+			Note:     KickDrum,
+			Tick:     startTick + uint32(beat)*quarterNote,
+			Velocity: velocity + 10,
+		})
+	}
+
+	// Snare: beats 2 and 4
+	notes = append(notes, DrumNote{Note: SnareDrum, Tick: startTick + quarterNote, Velocity: velocity + 5})
+	notes = append(notes, DrumNote{Note: SnareDrum, Tick: startTick + 3*quarterNote, Velocity: velocity + 5})
+
+	// Hi-hat: 16th notes with open hihat on offbeats
+	for i := 0; i < 16; i++ {
+		hihatNote := uint8(ClosedHihat)
+		vel := velocity - 20
+
+		if i%4 == 2 { // "and" of each beat - open hihat
+			hihatNote = OpenHihat
+			vel = velocity - 10
+		} else if i%4 == 0 { // On the beat
+			vel = velocity - 15
+		}
+
+		notes = append(notes, DrumNote{
+			Note:     hihatNote,
+			Tick:     startTick + uint32(i)*sixteenthNote,
+			Velocity: uint8(vel),
+		})
+	}
+
+	return notes
+}
+
+// motownBeat generates a Motown/Soul beat
+func motownBeat(startTick, ticksPerBar uint32, velocity uint8) []DrumNote {
+	notes := []DrumNote{}
+	quarterNote := ticksPerBar / 4
+	eighthNote := ticksPerBar / 8
+
+	// Kick: beats 1 and 3 with occasional pickup
+	notes = append(notes, DrumNote{Note: KickDrum, Tick: startTick, Velocity: velocity + 10})
+	notes = append(notes, DrumNote{Note: KickDrum, Tick: startTick + 2*quarterNote, Velocity: velocity + 10})
+	// Pickup before beat 3
+	notes = append(notes, DrumNote{Note: KickDrum, Tick: startTick + quarterNote + 3*eighthNote/2, Velocity: velocity - 5})
+
+	// Snare: heavy on 2 and 4 (the Motown backbeat)
+	notes = append(notes, DrumNote{Note: SnareDrum, Tick: startTick + quarterNote, Velocity: velocity + 15})
+	notes = append(notes, DrumNote{Note: SnareDrum, Tick: startTick + 3*quarterNote, Velocity: velocity + 15})
+
+	// Tambourine feel on 8th notes
+	for i := 0; i < 8; i++ {
+		vel := velocity - 20
+		if i%2 == 0 {
+			vel = velocity - 15
+		}
+		notes = append(notes, DrumNote{
+			Note:     ClosedHihat,
+			Tick:     startTick + uint32(i)*eighthNote,
+			Velocity: uint8(vel),
+		})
+	}
+
+	return notes
+}
+
+// flamencoBeat generates a flamenco rumba beat (cajon style)
+func flamencoBeat(startTick, ticksPerBar uint32, velocity uint8) []DrumNote {
+	notes := []DrumNote{}
+	sixteenthNote := ticksPerBar / 16
+
+	// Flamenco rumba pattern - syncopated kicks and snares
+	// Classic pattern: 1 . . 2 . . 3 . 4 . 5 . 6 . . .
+
+	// Low tones (kick) on 1 and syncopated positions
+	kickPositions := []int{0, 6, 10}
+	for _, pos := range kickPositions {
+		vel := velocity + 10
+		if pos == 0 {
+			vel = velocity + 15 // Accent the ONE
+		}
+		notes = append(notes, DrumNote{
+			Note:     KickDrum,
+			Tick:     startTick + uint32(pos)*sixteenthNote,
+			Velocity: uint8(vel),
+		})
+	}
+
+	// High tones (snare/slap) on offbeats
+	slapPositions := []int{3, 8, 12}
+	for _, pos := range slapPositions {
+		notes = append(notes, DrumNote{
+			Note:     SnareDrum,
+			Tick:     startTick + uint32(pos)*sixteenthNote,
+			Velocity: velocity,
+		})
+	}
+
+	// Finger rolls/ghost notes
+	ghostPositions := []int{2, 5, 9, 14}
+	for _, pos := range ghostPositions {
+		notes = append(notes, DrumNote{
+			Note:     SnareDrum,
+			Tick:     startTick + uint32(pos)*sixteenthNote,
+			Velocity: velocity - 30,
 		})
 	}
 

@@ -18,6 +18,8 @@ A terminal-based backing track player that uses the BTML (Backing Track Markup L
 ✅ **Strudel export** - export to Strudel live coding format
 ✅ Play backing tracks via FluidSynth (when installed)
 
+**Supported Styles**: Rock, Blues, Jazz, Folk, Funk, Ska, Reggae, Country, Disco, Motown/Soul, Flamenco, EDM, Trap, Ragtime, Stride, Boogie-Woogie. See [MUSIC_STYLES.md](MUSIC_STYLES.md) for music theory and implementation details.
+
 ## Installation
 
 ### 1. Build the Application
@@ -339,7 +341,10 @@ MIT
 
 ## Contributing
 
-Contributions welcome! See `BTML_MANUAL.md` for the full BTML specification and `CLAUDE.md` for development guidelines.
+Contributions welcome! See:
+- `BTML_MANUAL.md` for the full BTML specification
+- `MUSIC_STYLES.md` for music theory and style implementation details
+- `CLAUDE.md` for development guidelines
 
 ## What's New
 

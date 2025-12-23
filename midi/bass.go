@@ -293,6 +293,133 @@ func GenerateBassLine(chords []parser.Chord, bass *parser.Bass, ticksPerBar uint
 				})
 			}
 
+		case "ska":
+			// Ska bass - walking pattern, often with octave jumps
+			// Madness/Specials style
+			eighthNote := ticksPerBar / 8
+			fifth := root + 7
+
+			skaPattern := []struct {
+				pos  int
+				note uint8
+				vel  uint8
+			}{
+				{0, root + 36, 95},  // 1
+				{2, fifth + 36, 80}, // 2
+				{4, root + 48, 85},  // 3 (octave up)
+				{6, fifth + 36, 80}, // 4
+			}
+
+			for _, p := range skaPattern {
+				tick := currentTick + uint32(p.pos)*eighthNote
+				notes = append(notes, BassNote{
+					Note:     p.note,
+					Tick:     tick,
+					Duration: eighthNote - 20,
+					Velocity: p.vel,
+				})
+			}
+
+		case "reggae", "one_drop":
+			// Reggae bass - sparse, heavy notes on 1 and 3
+			// Bob Marley style - deep and spacious
+			quarterNote := ticksPerBar / 4
+			fifth := root + 7
+
+			// Root on 1, fifth on 3 with space
+			notes = append(notes, BassNote{
+				Note:     root + 36,
+				Tick:     currentTick,
+				Duration: quarterNote * 2,
+				Velocity: 100,
+			})
+			notes = append(notes, BassNote{
+				Note:     fifth + 36,
+				Tick:     currentTick + quarterNote*2,
+				Duration: quarterNote,
+				Velocity: 85,
+			})
+
+		case "country", "train":
+			// Country bass - alternating root and fifth
+			quarterNote := ticksPerBar / 4
+			fifth := root + 7
+
+			countryPattern := []struct {
+				pos  int
+				note uint8
+				vel  uint8
+			}{
+				{0, root + 36, 95},  // 1
+				{1, fifth + 36, 80}, // 2
+				{2, root + 36, 90},  // 3
+				{3, fifth + 36, 80}, // 4
+			}
+
+			for _, p := range countryPattern {
+				tick := currentTick + uint32(p.pos)*quarterNote
+				notes = append(notes, BassNote{
+					Note:     p.note,
+					Tick:     tick,
+					Duration: quarterNote - 30,
+					Velocity: p.vel,
+				})
+			}
+
+		case "disco":
+			// Disco bass - driving octave pattern
+			eighthNote := ticksPerBar / 8
+
+			// Classic disco: root and octave on 8th notes
+			for i := 0; i < 8; i++ {
+				tick := currentTick + uint32(i)*eighthNote
+				note := root + 36
+				if i%2 == 1 {
+					note = root + 48 // Octave up on off-beats
+				}
+				vel := uint8(85)
+				if i%4 == 0 {
+					vel = 95 // Accent quarter beats
+				}
+				notes = append(notes, BassNote{
+					Note:     note,
+					Tick:     tick,
+					Duration: eighthNote - 20,
+					Velocity: vel,
+				})
+			}
+
+		case "motown", "soul":
+			// Motown bass - melodic, syncopated (James Jamerson style)
+			sixteenthNote := ticksPerBar / 16
+			third := getThird(chord.Symbol)
+			fifth := uint8(7)
+
+			motownPattern := []struct {
+				pos      int
+				interval uint8
+				vel      uint8
+			}{
+				{0, 0, 95},     // 1 - root
+				{3, fifth, 75}, // 1a - fifth
+				{4, 0, 80},     // 2 - root
+				{7, third, 70}, // 2a - third
+				{8, fifth, 85}, // 3 - fifth
+				{10, 0, 75},    // 3& - root
+				{12, third, 80}, // 4 - third
+				{14, fifth, 70}, // 4& - fifth
+			}
+
+			for _, p := range motownPattern {
+				tick := currentTick + uint32(p.pos)*sixteenthNote
+				notes = append(notes, BassNote{
+					Note:     root + 36 + p.interval,
+					Tick:     tick,
+					Duration: sixteenthNote*2 - 15,
+					Velocity: p.vel,
+				})
+			}
+
 		default:
 			// Default to simple root notes
 			notes = append(notes, BassNote{

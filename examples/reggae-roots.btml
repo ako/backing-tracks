@@ -1,0 +1,31 @@
+# Roots Reggae - Bob Marley/Peter Tosh Style
+# One-drop rhythm, spacious and deep
+
+track:
+  title: "Roots Reggae"
+  key: Am
+  tempo: 76
+  time_signature: 4/4
+  style: reggae
+
+chord_progression:
+  # Classic roots changes
+  pattern: "Am Am Dm Dm G G Am Am"
+  bars_per_chord: 1
+  repeat: 4
+
+rhythm:
+  style: reggae
+
+bass:
+  style: reggae
+
+drums:
+  style: reggae
+  intensity: 0.7
+
+melody:
+  enabled: false
+
+scale:
+  type: pentatonic_minor

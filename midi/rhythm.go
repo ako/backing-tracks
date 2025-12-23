@@ -345,6 +345,156 @@ func generateRhythmPattern(style string, notes ChordVoicing, startTick, duration
 			}
 		}
 
+	case "ska", "skank":
+		// Ska off-beat "skank" - chords on the "and" of each beat
+		// Classic Madness/Specials/Doe Maar style
+		eighthNote := ticksPerBar / 8
+		for i := 0; i < int(duration/eighthNote); i++ {
+			// Only play on off-beats (1, 3, 5, 7 in 8th note grid)
+			if i%2 == 1 {
+				tick := startTick + uint32(i)*eighthNote
+				vel := uint8(85)
+				// Short, choppy chords
+				noteLen := eighthNote * 2 / 3
+				for _, note := range notes {
+					events = append(events, midiEvent{tick, midi.NoteOn(0, note, vel)})
+					events = append(events, midiEvent{tick + noteLen, midi.NoteOff(0, note)})
+				}
+			}
+		}
+
+	case "reggae", "one_drop":
+		// Reggae rhythm - emphasis on beat 3, off-beat chops
+		// Bob Marley/Peter Tosh style
+		eighthNote := ticksPerBar / 8
+		for i := 0; i < int(duration/eighthNote); i++ {
+			tick := startTick + uint32(i)*eighthNote
+			beat := i / 2
+			isOffBeat := i%2 == 1
+
+			if isOffBeat {
+				// Off-beat chops (lighter)
+				vel := uint8(65)
+				noteLen := eighthNote / 2
+				for _, note := range notes {
+					events = append(events, midiEvent{tick, midi.NoteOn(0, note, vel)})
+					events = append(events, midiEvent{tick + noteLen, midi.NoteOff(0, note)})
+				}
+			} else if beat == 2 {
+				// Heavy accent on beat 3 (the "one drop" feel)
+				vel := uint8(90)
+				noteLen := eighthNote
+				for _, note := range notes {
+					events = append(events, midiEvent{tick, midi.NoteOn(0, note, vel)})
+					events = append(events, midiEvent{tick + noteLen, midi.NoteOff(0, note)})
+				}
+			}
+		}
+
+	case "country", "train":
+		// Country train beat / boom-chick pattern
+		// Bass note on 1,3 - chord on 2,4
+		quarterNote := ticksPerBar / 4
+		for i := 0; i < int(duration/quarterNote); i++ {
+			tick := startTick + uint32(i)*quarterNote
+			if i%2 == 0 {
+				// Beats 1, 3: bass note only (root)
+				if len(notes) > 0 {
+					vel := uint8(85)
+					events = append(events, midiEvent{tick, midi.NoteOn(0, notes[0], vel)})
+					events = append(events, midiEvent{tick + quarterNote - 20, midi.NoteOff(0, notes[0])})
+				}
+			} else {
+				// Beats 2, 4: full chord (shorter, snappier)
+				vel := uint8(75)
+				noteLen := quarterNote * 2 / 3
+				for _, note := range notes {
+					events = append(events, midiEvent{tick, midi.NoteOn(0, note, vel)})
+					events = append(events, midiEvent{tick + noteLen, midi.NoteOff(0, note)})
+				}
+			}
+		}
+
+	case "disco":
+		// Disco - four on the floor with 16th note embellishments
+		sixteenthNote := ticksPerBar / 16
+		for i := 0; i < int(duration/sixteenthNote); i++ {
+			tick := startTick + uint32(i)*sixteenthNote
+			isQuarterBeat := i%4 == 0
+			isOffBeat := i%2 == 1
+
+			if isQuarterBeat {
+				// Strong chord on quarter notes
+				vel := uint8(85)
+				noteLen := sixteenthNote * 3
+				for _, note := range notes {
+					events = append(events, midiEvent{tick, midi.NoteOn(0, note, vel)})
+					events = append(events, midiEvent{tick + noteLen, midi.NoteOff(0, note)})
+				}
+			} else if isOffBeat && (i%4 == 1 || i%4 == 3) {
+				// Light off-beat hits
+				vel := uint8(55)
+				noteLen := sixteenthNote / 2
+				for _, note := range notes {
+					events = append(events, midiEvent{tick, midi.NoteOn(0, note, vel)})
+					events = append(events, midiEvent{tick + noteLen, midi.NoteOff(0, note)})
+				}
+			}
+		}
+
+	case "motown", "soul":
+		// Motown/Soul - tight rhythm, emphasis on 2 and 4
+		// Otis Redding / Stax style
+		eighthNote := ticksPerBar / 8
+		for i := 0; i < int(duration/eighthNote); i++ {
+			tick := startTick + uint32(i)*eighthNote
+			beat := i / 2
+			isOnBeat := i%2 == 0
+
+			vel := uint8(70)
+			noteLen := eighthNote * 2 / 3
+
+			if isOnBeat && (beat == 1 || beat == 3) {
+				// Heavy backbeat on 2 and 4
+				vel = 90
+				noteLen = eighthNote
+			} else if isOnBeat && beat == 0 {
+				// Moderate on beat 1
+				vel = 80
+			}
+
+			for _, note := range notes {
+				events = append(events, midiEvent{tick, midi.NoteOn(0, note, vel)})
+				events = append(events, midiEvent{tick + noteLen, midi.NoteOff(0, note)})
+			}
+		}
+
+	case "flamenco", "rumba":
+		// Flamenco rumba pattern - syncopated with strong accents
+		sixteenthNote := ticksPerBar / 16
+		// Classic flamenco pattern: accent pattern across 16ths
+		// 1 . . 2 . . 3 . 4 . 5 . 6 . . .
+		accentPattern := []int{0, 3, 6, 8, 10, 12} // positions to play
+		accentVels := []uint8{95, 75, 75, 85, 75, 80}
+
+		for bar := uint32(0); bar < duration/ticksPerBar; bar++ {
+			for idx, pos := range accentPattern {
+				tick := startTick + bar*ticksPerBar + uint32(pos)*sixteenthNote
+				if tick >= startTick+duration {
+					break
+				}
+				vel := accentVels[idx]
+				noteLen := sixteenthNote
+				if idx == 0 {
+					noteLen = sixteenthNote * 2 // longer on the ONE
+				}
+				for _, note := range notes {
+					events = append(events, midiEvent{tick, midi.NoteOn(0, note, vel)})
+					events = append(events, midiEvent{tick + noteLen, midi.NoteOff(0, note)})
+				}
+			}
+		}
+
 	default:
 		// Default to whole notes
 		for _, note := range notes {

@@ -1,0 +1,31 @@
+# Flamenco Rumba
+# Spanish guitar with cajon-style rhythm
+
+track:
+  title: "Rumba Flamenca"
+  key: Am
+  tempo: 100
+  time_signature: 4/4
+  style: flamenco
+
+chord_progression:
+  # Classic Andalusian cadence
+  pattern: "Am G F E Am G F E"
+  bars_per_chord: 1
+  repeat: 4
+
+rhythm:
+  style: flamenco
+
+bass:
+  style: root
+
+drums:
+  style: flamenco
+  intensity: 0.75
+
+melody:
+  enabled: false
+
+scale:
+  type: natural_minor

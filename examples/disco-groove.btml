@@ -1,0 +1,31 @@
+# Disco Groove
+# Four-on-the-floor with driving bass
+
+track:
+  title: "Disco Nights"
+  key: Dm
+  tempo: 120
+  time_signature: 4/4
+  style: disco
+
+chord_progression:
+  # Classic disco changes
+  pattern: "Dm7 Dm7 Gm7 Gm7 A7 A7 Dm7 Dm7"
+  bars_per_chord: 1
+  repeat: 4
+
+rhythm:
+  style: disco
+
+bass:
+  style: disco
+
+drums:
+  style: disco
+  intensity: 0.85
+
+melody:
+  enabled: false
+
+scale:
+  type: dorian

@@ -363,6 +363,18 @@ func (m *TUIModel) getStrumPatternSymbols() []string {
 		return []string{"↓", ".", "x", ".", "↑", "x", "↓", ".", "x", ".", "↑", ".", "↓", "x", "↑", "."}
 	case "funk_muted":
 		return []string{"x", ".", "↓", ".", "x", ".", "↑", ".", "x", ".", "↓", ".", "x", ".", "↑", "."}
+	case "ska", "skank":
+		return []string{".", "↓", ".", "↓", ".", "↓", ".", "↓"}
+	case "reggae", "one_drop":
+		return []string{".", ".", ".", ".", "↓", ".", ".", "."}
+	case "country", "train":
+		return []string{"↓", ".", "↓", ".", "↓", ".", "↓", "."}
+	case "disco":
+		return []string{"↓", ".", "↓", ".", "↓", ".", "↓", "."}
+	case "motown", "soul":
+		return []string{"↓", ".", "↓", "↑", "↓", ".", "↓", "↑"}
+	case "flamenco", "rumba":
+		return []string{"↓", ".", ".", "↓", ".", ".", "↓", ".", "↓", ".", "↓", ".", "↓", ".", ".", "."}
 	default:
 		return []string{"↓", ".", "↑", ".", "↓", ".", "↑", "."}
 	}
@@ -486,19 +498,55 @@ func (m *TUIModel) renderRightColumn() string {
 		lines = append(lines, "")
 	}
 
-	// Chord charts for unique chords
+	// Chord charts for unique chords - 3 per row
 	uniqueChords := m.getUniqueChords()
+	var allDiagrams [][]string
+
 	for _, chord := range uniqueChords {
 		voicings := m.chordChart.GetVoicings(chord)
 		if len(voicings) == 0 {
-			lines = append(lines, fmt.Sprintf(" %s: [no chart]", chord))
 			continue
 		}
+		allDiagrams = append(allDiagrams, m.renderChordDiagram(voicings[0]))
+	}
 
-		// Show first voicing
-		v := voicings[0]
-		lines = append(lines, m.renderChordDiagram(v)...)
-		lines = append(lines, "")
+	// Arrange 3 per row
+	chartsPerRow := 3
+	chartWidth := 22
+
+	for i := 0; i < len(allDiagrams); i += chartsPerRow {
+		end := i + chartsPerRow
+		if end > len(allDiagrams) {
+			end = len(allDiagrams)
+		}
+		rowDiagrams := allDiagrams[i:end]
+
+		// Find max height in this row
+		maxHeight := 0
+		for _, diag := range rowDiagrams {
+			if len(diag) > maxHeight {
+				maxHeight = len(diag)
+			}
+		}
+
+		// Render row by joining diagrams horizontally
+		for lineIdx := 0; lineIdx < maxHeight; lineIdx++ {
+			var rowLine string
+			for _, diag := range rowDiagrams {
+				cell := ""
+				if lineIdx < len(diag) {
+					cell = diag[lineIdx]
+				}
+				// Pad to fixed width
+				cellRunes := []rune(cell)
+				if len(cellRunes) < chartWidth {
+					cell = cell + strings.Repeat(" ", chartWidth-len(cellRunes))
+				}
+				rowLine += cell
+			}
+			lines = append(lines, rowLine)
+		}
+		lines = append(lines, "") // Spacer between rows
 	}
 
 	return strings.Join(lines, "\n")

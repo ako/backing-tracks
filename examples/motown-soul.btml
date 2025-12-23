@@ -1,0 +1,31 @@
+# Motown Soul - Otis Redding/Stax Style
+# Heavy backbeat, melodic bass
+
+track:
+  title: "Soul Man"
+  key: G
+  tempo: 112
+  time_signature: 4/4
+  style: soul
+
+chord_progression:
+  # Classic soul changes
+  pattern: "G G C C G G D D"
+  bars_per_chord: 1
+  repeat: 4
+
+rhythm:
+  style: motown
+
+bass:
+  style: motown
+
+drums:
+  style: motown
+  intensity: 0.8
+
+melody:
+  enabled: false
+
+scale:
+  type: pentatonic_major

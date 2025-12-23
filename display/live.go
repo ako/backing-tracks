@@ -185,6 +185,18 @@ func getStrumPattern(rhythm *parser.Rhythm) string {
 		return "↓.x.↑x↓.x.↑.↓x↑."
 	case "funk_muted":
 		return "x.↓.x.↑.x.↓.x.↑."
+	case "ska", "skank":
+		return ". ↓ . ↓ . ↓ . ↓"
+	case "reggae", "one_drop":
+		return ". . . . ↓ . . ."
+	case "country", "train":
+		return "↓ . ↓ . ↓ . ↓ ."
+	case "disco":
+		return "↓ . ↓ . ↓ . ↓ ."
+	case "motown", "soul":
+		return "↓ . ↓ ↑ ↓ . ↓ ↑"
+	case "flamenco", "rumba":
+		return "↓..↓..↓.↓.↓.↓..."
 	default:
 		return "↓ . ↑ . ↓ . ↑ ."
 	}
@@ -272,6 +284,7 @@ func (ld *LiveDisplay) getUniqueChords() []string {
 
 // renderAllChordCharts renders chord charts for all unique chords in the song
 // For fingerpicking styles, also includes the picking pattern tablature
+// Chords are arranged 3 per row horizontally
 func (ld *LiveDisplay) renderAllChordCharts() []string {
 	var lines []string
 
@@ -288,20 +301,54 @@ func (ld *LiveDisplay) renderAllChordCharts() []string {
 
 	uniqueChords := ld.getUniqueChords()
 
+	// Collect all chord diagrams
+	var allDiagrams [][]string
 	for _, chord := range uniqueChords {
 		voicings := ld.chordChart.GetVoicings(chord)
 		if len(voicings) == 0 {
-			lines = append(lines, fmt.Sprintf(" %s: [no chart]", chord))
-			lines = append(lines, "")
 			continue
 		}
+		// Only show first voicing for each chord
+		allDiagrams = append(allDiagrams, ld.chordChart.RenderSingleChord(voicings[0]))
+	}
 
-		// Show all voicings for this chord
-		for _, v := range voicings {
-			chordLines := ld.chordChart.RenderSingleChord(v)
-			lines = append(lines, chordLines...)
-			lines = append(lines, "") // spacer between voicings
+	// Arrange 3 per row
+	chartsPerRow := 3
+	chartWidth := 22
+
+	for i := 0; i < len(allDiagrams); i += chartsPerRow {
+		end := i + chartsPerRow
+		if end > len(allDiagrams) {
+			end = len(allDiagrams)
 		}
+		rowDiagrams := allDiagrams[i:end]
+
+		// Find max height in this row
+		maxHeight := 0
+		for _, diag := range rowDiagrams {
+			if len(diag) > maxHeight {
+				maxHeight = len(diag)
+			}
+		}
+
+		// Render row by joining diagrams horizontally
+		for lineIdx := 0; lineIdx < maxHeight; lineIdx++ {
+			var rowLine string
+			for _, diag := range rowDiagrams {
+				cell := ""
+				if lineIdx < len(diag) {
+					cell = diag[lineIdx]
+				}
+				// Pad to fixed width (accounting for ANSI codes)
+				visLen := visibleLength(cell)
+				if visLen < chartWidth {
+					cell = cell + strings.Repeat(" ", chartWidth-visLen)
+				}
+				rowLine += cell
+			}
+			lines = append(lines, rowLine)
+		}
+		lines = append(lines, "") // Spacer between rows
 	}
 
 	return lines
