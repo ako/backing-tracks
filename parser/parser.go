@@ -32,9 +32,31 @@ type TrackInfo struct {
 
 // ChordProgression represents the chord sequence
 type ChordProgression struct {
-	Pattern       string `yaml:"pattern"`
-	BarsPerChord  int    `yaml:"bars_per_chord"`
-	Repeat        int    `yaml:"repeat"`
+	Pattern      StringOrList `yaml:"pattern"`
+	BarsPerChord int          `yaml:"bars_per_chord"`
+	Repeat       int          `yaml:"repeat"`
+}
+
+// StringOrList can be unmarshaled from either a string or a list of strings
+type StringOrList string
+
+// UnmarshalYAML implements custom unmarshaling for StringOrList
+func (s *StringOrList) UnmarshalYAML(node *yaml.Node) error {
+	// Try as a single string first
+	var str string
+	if err := node.Decode(&str); err == nil {
+		*s = StringOrList(str)
+		return nil
+	}
+
+	// Try as a list of strings
+	var list []string
+	if err := node.Decode(&list); err == nil {
+		*s = StringOrList(strings.Join(list, " "))
+		return nil
+	}
+
+	return nil
 }
 
 // Chord represents a single chord with duration
@@ -69,7 +91,7 @@ func LoadTrack(filename string) (*Track, error) {
 // GetChords parses the pattern string and returns a slice of chords
 // Supports inline duration notation: "Em*2" = Em for 2 bars, "G*0.5" = G for half a bar
 func (cp *ChordProgression) GetChords() []Chord {
-	parts := strings.Fields(cp.Pattern)
+	parts := strings.Fields(string(cp.Pattern))
 	chords := make([]Chord, 0, len(parts))
 
 	for _, part := range parts {

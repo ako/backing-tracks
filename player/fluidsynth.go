@@ -36,6 +36,33 @@ func PlayMIDIWithDisplay(midiFile string, track *parser.Track, customSoundFont s
 		return playWithLegacyDisplay(midiFile, track, soundFont)
 	}
 
+	// Create real-time player
+	player, err := NewRealtimePlayer(track, soundFont)
+	if err != nil {
+		// Fall back to file-based playback if real-time fails
+		fmt.Println("Real-time playback unavailable, using file-based playback...")
+		return playWithFileBasedTUI(midiFile, track, soundFont)
+	}
+	defer player.Stop()
+
+	// Create TUI model and connect to player
+	tuiModel := display.NewTUIModel(track)
+	tuiModel.SetPlayer(player)
+
+	// Start playback
+	player.Start()
+
+	// Run the TUI
+	p := tea.NewProgram(tuiModel, tea.WithAltScreen())
+	if _, err := p.Run(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// playWithFileBasedTUI is the fallback when real-time playback isn't available
+func playWithFileBasedTUI(midiFile string, track *parser.Track, soundFont string) error {
 	// Create TUI model
 	tuiModel := display.NewTUIModel(track)
 

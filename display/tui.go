@@ -63,6 +63,14 @@ var (
 // TickMsg is sent on each tick for time updates
 type TickMsg time.Time
 
+// PlayerController interface for controlling audio playback
+type PlayerController interface {
+	TogglePause()
+	SeekRelative(bars int)
+	GetPlaybackState() (bar int, beat int, strum int, paused bool)
+	IsPaused() bool
+}
+
 // TUIModel is the Bubbletea model for live display
 type TUIModel struct {
 	track        *parser.Track
@@ -85,8 +93,15 @@ type TUIModel struct {
 	height int
 
 	// State
-	playing bool
-	quitting bool
+	playing      bool
+	paused       bool
+	pausedAt     time.Time
+	pausedTotal  time.Duration
+	seekOffset   time.Duration // For seeking forward/backward
+	quitting     bool
+
+	// Audio player (optional - for synced playback)
+	player PlayerController
 }
 
 // NewTUIModel creates a new TUI model
@@ -115,6 +130,11 @@ func NewTUIModel(track *parser.Track) *TUIModel {
 	}
 }
 
+// SetPlayer sets the audio player controller for synced playback
+func (m *TUIModel) SetPlayer(p PlayerController) {
+	m.player = p
+}
+
 // Init initializes the model
 func (m *TUIModel) Init() tea.Cmd {
 	m.startTime = time.Now()
@@ -139,6 +159,39 @@ func (m *TUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q", "ctrl+c", "esc":
 			m.quitting = true
 			return m, tea.Quit
+		case " ":
+			// Toggle pause
+			if m.player != nil {
+				m.player.TogglePause()
+			} else {
+				if m.paused {
+					m.pausedTotal += time.Since(m.pausedAt)
+					m.paused = false
+				} else {
+					m.pausedAt = time.Now()
+					m.paused = true
+				}
+			}
+		case "left":
+			// Jump to previous bar
+			if m.player != nil {
+				m.player.SeekRelative(-1)
+			} else {
+				timePerBar := m.timePerBeat * 4
+				if m.currentBar > 0 {
+					m.seekOffset -= timePerBar
+				}
+			}
+		case "right":
+			// Jump to next bar
+			if m.player != nil {
+				m.player.SeekRelative(1)
+			} else {
+				timePerBar := m.timePerBeat * 4
+				if m.currentBar < len(m.bars)-1 {
+					m.seekOffset += timePerBar
+				}
+			}
 		}
 
 	case tea.WindowSizeMsg:
@@ -147,7 +200,11 @@ func (m *TUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case TickMsg:
 		if m.playing {
-			m.updatePosition()
+			// Always update when we have a player (it controls pause state)
+			// Otherwise check local pause state
+			if m.player != nil || !m.paused {
+				m.updatePosition()
+			}
 			return m, tickCmd()
 		}
 	}
@@ -157,7 +214,19 @@ func (m *TUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // updatePosition calculates current bar/beat from elapsed time
 func (m *TUIModel) updatePosition() {
-	elapsed := time.Since(m.startTime)
+	// If we have a player, sync from it
+	if m.player != nil {
+		m.currentBar, m.currentBeat, m.currentStrum, m.paused = m.player.GetPlaybackState()
+		return
+	}
+
+	// Fallback: calculate from local time (display-only mode)
+	elapsed := time.Since(m.startTime) - m.pausedTotal + m.seekOffset
+	if elapsed < 0 {
+		elapsed = 0
+		// Reset seek offset to prevent going negative
+		m.seekOffset = m.pausedTotal - time.Since(m.startTime)
+	}
 	totalBeats := int(elapsed / m.timePerBeat)
 	m.currentBeat = totalBeats % 4
 	m.currentBar = totalBeats / 4
@@ -216,7 +285,15 @@ func (m *TUIModel) renderHeader() string {
 		scaleName = headerStyle.Render(" │ Scale: " + m.currentScale.Name)
 	}
 
-	return fmt.Sprintf("  %s    %s%s", title, info, scaleName)
+	pauseIndicator := ""
+	if m.paused {
+		pauseIndicator = lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("#FF6600")).
+			Render("  ⏸ PAUSED (space to resume)")
+	}
+
+	return fmt.Sprintf("  %s    %s%s%s", title, info, scaleName, pauseIndicator)
 }
 
 // renderLeftColumn renders the chord/beat display
@@ -308,12 +385,21 @@ func (m *TUIModel) renderBarRow(startBar int) string {
 	return strings.Join(lines, "\n")
 }
 
-// getBarChordName returns the chord name for a bar
+// getBarChordName returns the chord name(s) for a bar
 func (m *TUIModel) getBarChordName(barIdx int) string {
 	if barIdx >= len(m.bars) || len(m.bars[barIdx].Chords) == 0 {
 		return ""
 	}
-	return m.bars[barIdx].Chords[0].Symbol
+	bar := m.bars[barIdx]
+	if len(bar.Chords) == 1 {
+		return bar.Chords[0].Symbol
+	}
+	// Multiple chords in this bar - show all
+	var names []string
+	for _, bc := range bar.Chords {
+		names = append(names, bc.Symbol)
+	}
+	return strings.Join(names, " → ")
 }
 
 // renderStrumPattern renders the strum pattern for a bar
@@ -696,11 +782,14 @@ func (m *TUIModel) renderProgressBar() string {
 	filled := int(progress * float64(width))
 	bar := strings.Repeat("▓", filled) + strings.Repeat("░", width-filled)
 
-	return fmt.Sprintf("  %s  %d%% (bar %d/%d)",
+	controls := headerStyle.Render("  [space] pause  [←/→] seek  [q] quit")
+
+	return fmt.Sprintf("  %s  %d%% (bar %d/%d)%s",
 		progressStyle.Render(bar),
 		int(progress*100),
 		m.currentBar+1,
-		len(m.bars))
+		len(m.bars),
+		controls)
 }
 
 // Stop signals the model to stop
