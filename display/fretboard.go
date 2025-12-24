@@ -10,6 +10,7 @@ import (
 // FretboardDisplay manages guitar neck visualization
 type FretboardDisplay struct {
 	scale        *theory.Scale
+	tuning       theory.Tuning
 	numFrets     int
 	positions    [][]bool // [string][fret] = in scale
 	roots        [][]bool // [string][fret] = is root
@@ -17,10 +18,16 @@ type FretboardDisplay struct {
 	compactMode  bool     // Use compact display for narrow terminals
 }
 
-// NewFretboardDisplay creates a new fretboard display
+// NewFretboardDisplay creates a new fretboard display with standard tuning
 func NewFretboardDisplay(scale *theory.Scale, numFrets int) *FretboardDisplay {
+	return NewFretboardDisplayWithTuning(scale, numFrets, theory.Tunings["standard"])
+}
+
+// NewFretboardDisplayWithTuning creates a new fretboard display with a specific tuning
+func NewFretboardDisplayWithTuning(scale *theory.Scale, numFrets int, tuning theory.Tuning) *FretboardDisplay {
 	fd := &FretboardDisplay{
 		scale:       scale,
+		tuning:      tuning,
 		numFrets:    numFrets,
 		highlighted: []int{},
 		compactMode: false,
@@ -29,10 +36,16 @@ func NewFretboardDisplay(scale *theory.Scale, numFrets int) *FretboardDisplay {
 	return fd
 }
 
+// SetTuning updates the guitar tuning
+func (fd *FretboardDisplay) SetTuning(tuning theory.Tuning) {
+	fd.tuning = tuning
+	fd.updatePositions()
+}
+
 // updatePositions recalculates scale positions on fretboard
 func (fd *FretboardDisplay) updatePositions() {
 	if fd.scale != nil {
-		fd.positions, fd.roots = fd.scale.GetFretboardPositions(fd.numFrets)
+		fd.positions, fd.roots = fd.scale.GetFretboardPositionsWithTuning(fd.numFrets, fd.tuning)
 	}
 }
 
@@ -59,7 +72,10 @@ func (fd *FretboardDisplay) ClearHighlights() {
 
 // isHighlighted checks if a fret position is currently highlighted
 func (fd *FretboardDisplay) isHighlighted(stringIdx, fret int) bool {
-	midiNote := theory.GuitarTuning[stringIdx] + fret
+	if stringIdx >= len(fd.tuning.Notes) {
+		return false
+	}
+	midiNote := fd.tuning.Notes[stringIdx] + fret
 	for _, h := range fd.highlighted {
 		if h == midiNote {
 			return true
@@ -106,12 +122,20 @@ func (fd *FretboardDisplay) renderFull() []string {
 	}
 	lines = append(lines, nutLine)
 
-	// Guitar strings (high to low for display: e, B, G, D, A, E)
-	stringOrder := []int{5, 4, 3, 2, 1, 0} // Reverse for display (high e at top)
+	// Guitar strings (high to low for display)
+	numStrings := len(fd.tuning.Notes)
+	stringOrder := make([]int, numStrings)
+	for i := 0; i < numStrings; i++ {
+		stringOrder[i] = numStrings - 1 - i // Reverse for display (high string at top)
+	}
 
 	for i, stringIdx := range stringOrder {
-		stringName := theory.GuitarStringNames[stringIdx]
-		line := fmt.Sprintf(" %s ║", stringName)
+		stringName := fd.tuning.Names[stringIdx]
+		// Pad string name to 2 chars for alignment
+		if len(stringName) == 1 {
+			stringName = " " + stringName
+		}
+		line := fmt.Sprintf("%s ║", stringName)
 
 		for fret := 0; fret <= fd.numFrets; fret++ {
 			symbol := fd.getFretSymbol(stringIdx, fret)
@@ -192,10 +216,18 @@ func (fd *FretboardDisplay) renderCompact() []string {
 	lines = append(lines, fretHeader)
 
 	// Strings (high to low)
-	stringOrder := []int{5, 4, 3, 2, 1, 0}
+	numStrings := len(fd.tuning.Notes)
+	stringOrder := make([]int, numStrings)
+	for i := 0; i < numStrings; i++ {
+		stringOrder[i] = numStrings - 1 - i
+	}
 	for _, stringIdx := range stringOrder {
-		stringName := theory.GuitarStringNames[stringIdx]
-		line := fmt.Sprintf("%s ", stringName)
+		stringName := fd.tuning.Names[stringIdx]
+		// Pad to 2 chars
+		if len(stringName) == 1 {
+			stringName = stringName + " "
+		}
+		line := fmt.Sprintf("%s", stringName)
 
 		for fret := 0; fret <= maxFret; fret++ {
 			symbol := fd.getCompactSymbol(stringIdx, fret)

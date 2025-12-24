@@ -54,6 +54,47 @@ var GuitarTuning = []int{40, 45, 50, 55, 59, 64}
 // GuitarStringNames for display
 var GuitarStringNames = []string{"E", "A", "D", "G", "B", "e"}
 
+// Tuning represents a guitar tuning configuration
+type Tuning struct {
+	Notes []int    // MIDI note numbers for each string (low to high)
+	Names []string // String names for display
+}
+
+// Tunings maps tuning names to their configurations
+var Tunings = map[string]Tuning{
+	// Standard and drop tunings
+	"standard": {[]int{40, 45, 50, 55, 59, 64}, []string{"E", "A", "D", "G", "B", "e"}},
+	"drop_d":   {[]int{38, 45, 50, 55, 59, 64}, []string{"D", "A", "D", "G", "B", "e"}},
+	"drop_c":   {[]int{36, 43, 48, 53, 57, 62}, []string{"C", "G", "C", "F", "A", "d"}},
+	"d_standard": {[]int{38, 43, 48, 53, 57, 62}, []string{"D", "G", "C", "F", "A", "d"}},  // All strings down 1 whole step
+	"eb_standard": {[]int{39, 44, 49, 54, 58, 63}, []string{"Eb", "Ab", "Db", "Gb", "Bb", "eb"}}, // All strings down 1/2 step
+
+	// Open tunings
+	"open_e": {[]int{40, 47, 52, 56, 59, 64}, []string{"E", "B", "E", "G#", "B", "e"}},  // Open E major
+	"open_d": {[]int{38, 45, 50, 54, 57, 62}, []string{"D", "A", "D", "F#", "A", "d"}},  // Open D major
+	"open_g": {[]int{38, 43, 50, 55, 59, 62}, []string{"D", "G", "D", "G", "B", "d"}},   // Open G major (Keith Richards)
+	"open_a": {[]int{40, 45, 52, 57, 61, 64}, []string{"E", "A", "E", "A", "C#", "e"}},  // Open A major
+
+	// Modal/Celtic tunings
+	"dadgad": {[]int{38, 45, 50, 55, 57, 62}, []string{"D", "A", "D", "G", "A", "d"}},   // DADGAD (Celtic)
+	"dadgbd": {[]int{38, 45, 50, 55, 59, 62}, []string{"D", "A", "D", "G", "B", "d"}},   // Double drop D
+
+	// Other tunings
+	"open_c": {[]int{36, 43, 48, 55, 60, 64}, []string{"C", "G", "C", "G", "C", "e"}},   // Open C
+	"nashville": {[]int{52, 57, 62, 67, 71, 76}, []string{"e", "a", "d", "g", "b", "e"}}, // Nashville (high strung)
+}
+
+// GetTuning returns a tuning by name, defaulting to standard if not found
+func GetTuning(name string) Tuning {
+	if name == "" {
+		return Tunings["standard"]
+	}
+	if tuning, ok := Tunings[name]; ok {
+		return tuning
+	}
+	return Tunings["standard"]
+}
+
 // Scale represents a musical scale with intervals from root
 type Scale struct {
 	Name      string    // e.g., "A Minor Pentatonic"
@@ -295,13 +336,19 @@ func (s *Scale) IsRoot(midiNote int) bool {
 // Returns: positions[stringIndex][fretIndex] = true if note is in scale
 // Also returns: roots[stringIndex][fretIndex] = true if note is root
 func (s *Scale) GetFretboardPositions(numFrets int) (positions [][]bool, roots [][]bool) {
-	positions = make([][]bool, 6)
-	roots = make([][]bool, 6)
+	return s.GetFretboardPositionsWithTuning(numFrets, Tunings["standard"])
+}
 
-	for stringIdx := 0; stringIdx < 6; stringIdx++ {
+// GetFretboardPositionsWithTuning returns fretboard positions using a specific tuning
+func (s *Scale) GetFretboardPositionsWithTuning(numFrets int, tuning Tuning) (positions [][]bool, roots [][]bool) {
+	numStrings := len(tuning.Notes)
+	positions = make([][]bool, numStrings)
+	roots = make([][]bool, numStrings)
+
+	for stringIdx := 0; stringIdx < numStrings; stringIdx++ {
 		positions[stringIdx] = make([]bool, numFrets+1)
 		roots[stringIdx] = make([]bool, numFrets+1)
-		openNote := GuitarTuning[stringIdx]
+		openNote := tuning.Notes[stringIdx]
 
 		for fret := 0; fret <= numFrets; fret++ {
 			midiNote := openNote + fret

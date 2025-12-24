@@ -282,6 +282,30 @@ rhythm:
 | **Woodwinds** | `alto_sax`, `tenor_sax`, `clarinet`, `flute` |
 | **Organ** | `organ`, `church_organ`, `accordion`, `harmonica` |
 
+### Guitar Tunings
+
+Set alternate tunings for accurate fretboard display:
+
+```yaml
+track:
+  title: "Drop D Song"
+  tuning: drop_d
+```
+
+| Tuning | Notes | Use Case |
+|--------|-------|----------|
+| `standard` | E A D G B e | Default |
+| `drop_d` | D A D G B e | Foo Fighters, Rage Against the Machine |
+| `drop_c` | C G C F A d | Heavy metal |
+| `d_standard` | D G C F A d | Slightly lower, Nirvana |
+| `eb_standard` | Eb Ab Db Gb Bb eb | Half step down, SRV, GnR |
+| `open_e` | E B E G# B e | Slide blues, Black Crowes |
+| `open_d` | D A D F# A d | Slide, Joni Mitchell |
+| `open_g` | D G D G B d | Keith Richards, Rolling Stones |
+| `open_a` | E A E A C# e | Slide blues |
+| `dadgad` | D A D G A d | Celtic, Pierre Bensusan |
+| `open_c` | C G C G C e | Devin Townsend |
+
 ### Bass Styles
 
 | Style | Description | Best For |
@@ -469,6 +493,7 @@ Contributions welcome! See:
 - ✅ **Capo support**: Set capo in BTML file or adjust live with [/] keys
 - ✅ **Instrument selection**: Choose GM instruments per section (nylon_guitar, slap_bass, etc.)
 - ✅ **Sections & Form**: Define verse/chorus/bridge sections, specify song structure
+- ✅ **Guitar tunings**: Drop D, Open E, Open G, DADGAD, and more
 - ✅ **Track mute controls**: Mute individual tracks with keys 1-4
 - ✅ **Chord tones fretboard**: Shows all positions for current chord notes
 - ✅ **Synced audio & display**: Controls affect both sound and visuals

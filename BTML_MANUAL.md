@@ -71,6 +71,8 @@ track:
   tempo: 120                # BPM (beats per minute)
   time_signature: 4/4       # Currently only 4/4 supported
   style: rock               # Genre hint (rock, blues, jazz, folk, pop, ballad, funk, edm)
+  tuning: standard          # Guitar tuning (standard, drop_d, open_e, etc.)
+  capo: 0                   # Capo position (0 = no capo)
 ```
 
 ### Common Tempos by Genre
@@ -522,6 +524,43 @@ Each section can specify a General MIDI instrument. Available instruments:
 
 ---
 
+## Guitar Tunings
+
+Set the guitar tuning for accurate fretboard display:
+
+```yaml
+track:
+  title: "Slide Blues"
+  tuning: open_e
+```
+
+### Standard & Drop Tunings
+| Name | Notes | Use Case |
+|------|-------|----------|
+| `standard` | E A D G B e | Default tuning |
+| `drop_d` | D A D G B e | Heavy riffs, Foo Fighters, RATM |
+| `drop_c` | C G C F A d | Heavy metal, modern rock |
+| `d_standard` | D G C F A d | One whole step down, Nirvana |
+| `eb_standard` | Eb Ab Db Gb Bb eb | Half step down, SRV, Guns N' Roses |
+
+### Open Tunings
+| Name | Notes | Use Case |
+|------|-------|----------|
+| `open_e` | E B E G# B e | Slide blues, Black Crowes, Duane Allman |
+| `open_d` | D A D F# A d | Slide guitar, Joni Mitchell |
+| `open_g` | D G D G B d | Keith Richards, Rolling Stones |
+| `open_a` | E A E A C# e | Slide blues, Robert Johnson |
+| `open_c` | C G C G C e | Devin Townsend, Led Zeppelin |
+
+### Modal & Other Tunings
+| Name | Notes | Use Case |
+|------|-------|----------|
+| `dadgad` | D A D G A d | Celtic, Pierre Bensusan, Kashmir |
+| `dadgbd` | D A D G B d | Double drop D, Neil Young |
+| `nashville` | e a d g b e | High strung, jangly (octave higher) |
+
+---
+
 ## Scale Section
 
 Override the auto-detected scale for fretboard display and melody generation:
@@ -870,5 +909,6 @@ Features:
 - Custom SoundFont support
 - MIDI and Strudel export
 - **Instrument selection**: 50+ GM instruments (nylon_guitar, slap_bass, etc.)
+- **Guitar tunings**: Drop D, Open E, Open G, DADGAD, and more
 - **Capo support**: Set in BTML or adjust live with keyboard
 - **Transpose controls**: Shift key up/down during playback

@@ -119,7 +119,8 @@ func NewTUIModel(track *parser.Track) *TUIModel {
 
 	bars := processChordsIntoBars(track)
 	scale := theory.GetScaleForStyle(track.Info.Key, track.Info.Style, "")
-	fretboard := NewFretboardDisplay(scale, 15)
+	tuning := theory.GetTuning(track.Info.Tuning)
+	fretboard := NewFretboardDisplayWithTuning(scale, 15, tuning)
 	fretboard.SetCompactMode(true)
 	chordChart := NewChordChart()
 
