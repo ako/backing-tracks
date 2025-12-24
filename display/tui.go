@@ -695,8 +695,8 @@ func (m *TUIModel) renderMiddleColumn() string {
 	}
 	lines = append(lines, fretLine)
 
-	// Strings (high to low) - use tuning names
-	tuning := m.tuning
+	// Strings (high to low) - use capo-adjusted tuning for positions
+	tuning := m.getCapoAdjustedTuning()
 	if len(tuning.Names) == 0 {
 		tuning = theory.GetTuning("standard")
 	}
@@ -776,8 +776,8 @@ func (m *TUIModel) renderChordTonesFretboard() []string {
 	// Root note for highlighting
 	rootTone := chordTones[0]
 
-	// Use tuning from track
-	tuning := m.tuning
+	// Use capo-adjusted tuning for positions
+	tuning := m.getCapoAdjustedTuning()
 	if len(tuning.Names) == 0 {
 		tuning = theory.GetTuning("standard")
 	}
@@ -921,6 +921,39 @@ func (m *TUIModel) updateTransposedScale() {
 
 	// Update the scale
 	m.currentScale = theory.GetScaleForStyle(transposedKey, m.track.Info.Style, "")
+}
+
+// getCapoAdjustedTuning returns the tuning with capo applied
+// When capo is at fret N, each string's pitch is raised by N semitones
+func (m *TUIModel) getCapoAdjustedTuning() theory.Tuning {
+	if m.capoPosition == 0 {
+		return m.tuning
+	}
+
+	// Create new tuning with adjusted notes
+	adjusted := theory.Tuning{
+		Notes: make([]int, len(m.tuning.Notes)),
+		Names: make([]string, len(m.tuning.Names)),
+	}
+
+	for i, note := range m.tuning.Notes {
+		adjusted.Notes[i] = note + m.capoPosition
+	}
+
+	// Update string names to reflect new pitches
+	noteNames := []string{"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"}
+	for i, note := range adjusted.Notes {
+		adjusted.Names[i] = noteNames[note%12]
+	}
+	// Make high string lowercase if it was originally
+	if len(adjusted.Names) > 0 && len(m.tuning.Names) > 0 {
+		lastIdx := len(adjusted.Names) - 1
+		if len(m.tuning.Names[lastIdx]) > 0 && m.tuning.Names[lastIdx][0] >= 'a' && m.tuning.Names[lastIdx][0] <= 'z' {
+			adjusted.Names[lastIdx] = strings.ToLower(adjusted.Names[lastIdx])
+		}
+	}
+
+	return adjusted
 }
 
 // cycleTuning changes the tuning by the given offset (-1 for previous, +1 for next)
