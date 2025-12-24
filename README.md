@@ -58,6 +58,31 @@ drums:
 
 The YAML format is in LLM training data, making generation reliable. No GUI clicking, no manual entry - just pipe the output to a file and play.
 
+### Sheet Music to Backing Track in 30 Seconds
+
+With Claude Desktop, you can go from a **photo of sheet music** to a **playing backing track** in under 30 seconds:
+
+1. **Take a photo** of sheet music, lead sheet, or chord chart
+2. **Upload to Claude Desktop** with the [project instructions](CLAUDE_DESKTOP_PROJECT.md)
+3. **Claude extracts** key, tempo, chords, and song structure
+4. **Save the BTML** and play immediately
+
+```
+📷 Photo of sheet music
+       ↓
+🤖 Claude Desktop (vision + BTML generation)
+       ↓
+📄 song.btml
+       ↓
+🎵 ./backing-tracks play song.btml
+```
+
+**No other software offers this workflow.** Traditional approaches require:
+- Sheet music OCR → manual cleanup → DAW import → manual arrangement
+- Or: manually entering chords into Band-in-a-Box / iReal Pro
+
+With BTML + Claude, the LLM understands musical context, infers missing information, and outputs a ready-to-play backing track. See [CLAUDE_DESKTOP_PROJECT.md](CLAUDE_DESKTOP_PROJECT.md) for setup instructions.
+
 ## Installation
 
 ### 1. Build the Application
