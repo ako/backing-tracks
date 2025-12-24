@@ -40,6 +40,9 @@ type RealtimePlayer struct {
 	loopEndBar   int  // Last bar of loop (exclusive)
 	loopLength   int  // Number of bars in loop (1-9)
 
+	// Speed state
+	tempoOffset int // BPM offset from original tempo (e.g., +10 or -20)
+
 	// Control channels
 	stopChan chan struct{}
 	stopOnce sync.Once
@@ -228,11 +231,8 @@ func (p *RealtimePlayer) playbackLoop() {
 				continue
 			}
 
-			// Calculate current tick position
-			elapsed := time.Since(p.startTime) - p.pausedTotal + p.seekOffset
-			if elapsed < 0 {
-				elapsed = 0
-			}
+			// Calculate current tick position (speed-adjusted)
+			elapsed := p.getSpeedAdjustedElapsed()
 			currentTick := p.playbackData.TimeToTick(elapsed)
 
 			// Check for loop: if enabled and we've passed the loop end, jump back to loop start
@@ -475,12 +475,45 @@ func (p *RealtimePlayer) GetLoop() (enabled bool, startBar, endBar, length int) 
 	return p.loopEnabled, p.loopStartBar, p.loopEndBar, p.loopLength
 }
 
+// AdjustTempo adjusts the playback tempo by the given BPM delta (e.g., +5 or -5)
+// Effective tempo is clamped to minimum 20 BPM
+func (p *RealtimePlayer) AdjustTempo(deltaBPM int) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	newOffset := p.tempoOffset + deltaBPM
+	effectiveTempo := p.playbackData.Tempo + newOffset
+	// Clamp to minimum 20 BPM
+	if effectiveTempo < 20 {
+		newOffset = 20 - p.playbackData.Tempo
+	}
+	p.tempoOffset = newOffset
+}
+
+// GetTempo returns the current effective tempo and the offset from original
+func (p *RealtimePlayer) GetTempo() (effectiveBPM int, offset int) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.playbackData.Tempo + p.tempoOffset, p.tempoOffset
+}
+
+// getSpeedAdjustedElapsed returns the elapsed playback time adjusted for tempo changes (must be called with lock held)
+func (p *RealtimePlayer) getSpeedAdjustedElapsed() time.Duration {
+	realElapsed := time.Since(p.startTime) - p.pausedTotal + p.seekOffset
+	if realElapsed < 0 {
+		realElapsed = 0
+	}
+	// Calculate speed multiplier from tempo offset
+	// e.g., original 120 BPM + 10 offset = 130 BPM effective = 130/120 = 1.083x speed
+	effectiveTempo := float64(p.playbackData.Tempo + p.tempoOffset)
+	originalTempo := float64(p.playbackData.Tempo)
+	speedMultiplier := effectiveTempo / originalTempo
+	return time.Duration(float64(realElapsed) * speedMultiplier)
+}
+
 // getCurrentBar returns the current bar (must be called with lock held)
 func (p *RealtimePlayer) getCurrentBar() int {
-	elapsed := time.Since(p.startTime) - p.pausedTotal + p.seekOffset
-	if elapsed < 0 {
-		elapsed = 0
-	}
+	elapsed := p.getSpeedAdjustedElapsed()
 	currentTick := p.playbackData.TimeToTick(elapsed)
 	return int(currentTick / p.playbackData.TicksPerBar)
 }
@@ -636,12 +669,20 @@ func (p *RealtimePlayer) GetPlaybackState() (bar int, beat int, strum int, pause
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	elapsed := time.Since(p.startTime) - p.pausedTotal + p.seekOffset
+	// Calculate elapsed time (speed-adjusted)
+	var elapsed time.Duration
 	if p.paused {
-		elapsed = p.pausedAt.Sub(p.startTime) - p.pausedTotal + p.seekOffset
-	}
-	if elapsed < 0 {
-		elapsed = 0
+		// When paused, use time up to when pause happened
+		realElapsed := p.pausedAt.Sub(p.startTime) - p.pausedTotal + p.seekOffset
+		if realElapsed < 0 {
+			realElapsed = 0
+		}
+		effectiveTempo := float64(p.playbackData.Tempo + p.tempoOffset)
+		originalTempo := float64(p.playbackData.Tempo)
+		speedMultiplier := effectiveTempo / originalTempo
+		elapsed = time.Duration(float64(realElapsed) * speedMultiplier)
+	} else {
+		elapsed = p.getSpeedAdjustedElapsed()
 	}
 
 	currentTick := p.playbackData.TimeToTick(elapsed)
