@@ -177,8 +177,26 @@ func (cc *ChordChart) loadVoicings() {
 	cc.voicings["Asus2"] = []ChordVoicing{
 		{Name: "Asus2", Frets: [6]int{-1, 0, 2, 2, 0, 0}, BaseFret: 0},
 	}
+	cc.voicings["Bsus2"] = []ChordVoicing{
+		{Name: "Bsus2", Frets: [6]int{-1, 2, 4, 4, 2, 2}, BaseFret: 2},
+	}
+	cc.voicings["Csus2"] = []ChordVoicing{
+		{Name: "Csus2", Frets: [6]int{-1, 3, 0, 0, 3, 3}, BaseFret: 0},
+		{Name: "Csus2 (bar)", Frets: [6]int{-1, 3, 5, 5, 3, 3}, BaseFret: 3},
+	}
 	cc.voicings["Dsus2"] = []ChordVoicing{
 		{Name: "Dsus2", Frets: [6]int{-1, -1, 0, 2, 3, 0}, BaseFret: 0},
+	}
+	cc.voicings["Esus2"] = []ChordVoicing{
+		{Name: "Esus2", Frets: [6]int{0, 2, 4, 4, 0, 0}, BaseFret: 0},
+	}
+	cc.voicings["Fsus2"] = []ChordVoicing{
+		{Name: "Fsus2", Frets: [6]int{-1, -1, 3, 0, 1, 1}, BaseFret: 0},
+		{Name: "Fsus2 (bar)", Frets: [6]int{1, 3, 3, 0, 1, 1}, BaseFret: 1},
+	}
+	cc.voicings["Gsus2"] = []ChordVoicing{
+		{Name: "Gsus2", Frets: [6]int{3, 0, 0, 0, 3, 3}, BaseFret: 0},
+		{Name: "Gsus2 (bar)", Frets: [6]int{3, 5, 5, 2, 3, 3}, BaseFret: 3},
 	}
 
 	// Add aliases for flat/sharp variants
