@@ -138,8 +138,10 @@ During playback, you'll see:
 |-----|--------|
 | `Space` | Pause / Resume |
 | `←` / `→` | Jump to previous / next bar |
-| `↑` / `↓` | Transpose up / down by semitone |
-| `[` / `]` | Move capo down / up by one fret |
+| `↑` / `↓` | Transpose up / down by semitone (audio + display) |
+| `[` / `]` | Move capo down / up (transposes audio + display) |
+| `{` / `}` | Move visual capo down / up (display only, no audio change) |
+| `<` / `>` | Cycle through guitar tunings |
 | `1` | Toggle drums mute |
 | `2` | Toggle bass mute |
 | `3` | Toggle chords mute |
