@@ -53,32 +53,72 @@ Common chord symbol formats:
 
 ### BTML Output Format
 
+**Simple songs** (use chord_progression):
 ```yaml
-# [Title] - [Composer if known]
-# Converted from sheet music
-
 track:
   title: "Song Title"
-  key: C                    # From key signature
-  tempo: 120                # From tempo marking
-  time_signature: 4/4       # From time signature
-  style: rock               # Inferred from context
+  key: C
+  tempo: 120
+  style: rock
 
 chord_progression:
-  pattern: "C G Am F"       # Extracted chords
-  bars_per_chord: 1         # Default duration
-  repeat: 2                 # Number of times through
+  pattern: "C G Am F"
+  bars_per_chord: 1
+  repeat: 2
 
 rhythm:
-  style: quarter            # Appropriate for style
+  style: quarter
 
 bass:
-  style: root_fifth         # Appropriate for style
+  style: root_fifth
 
 drums:
-  style: rock_beat          # Appropriate for style
+  style: rock_beat
   intensity: 0.7
 ```
+
+**Complex songs with sections** (use sections + form):
+```yaml
+track:
+  title: "Song Title"
+  key: C
+  tempo: 120
+  style: pop
+
+sections:
+  - name: verse
+    chord_progression:
+      pattern: "C G Am F"
+
+  - name: chorus
+    chord_progression:
+      pattern: "F G C Am"
+
+  - name: bridge
+    chord_progression:
+      pattern: "Dm Em F G"
+
+form:
+  - verse
+  - verse
+  - chorus
+  - verse
+  - chorus
+  - bridge
+  - chorus
+
+rhythm:
+  style: eighth
+
+bass:
+  style: root_fifth
+
+drums:
+  style: rock_beat
+  intensity: 0.7
+```
+
+Use **sections + form** when the sheet music has clear verse/chorus/bridge structure. Use **chord_progression** for simpler songs or when structure is unclear.
 
 ### Style Inference Guidelines
 

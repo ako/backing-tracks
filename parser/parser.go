@@ -13,12 +13,20 @@ import (
 type Track struct {
 	Info        TrackInfo        `yaml:"track"`
 	Progression ChordProgression `yaml:"chord_progression"`
+	Sections    []Section        `yaml:"sections,omitempty"` // Named sections (verse, chorus, etc.)
+	Form        []string         `yaml:"form,omitempty"`     // Order of sections to play
 	Rhythm      *Rhythm          `yaml:"rhythm,omitempty"`
 	Bass        *Bass            `yaml:"bass,omitempty"`
 	Drums       *Drums           `yaml:"drums,omitempty"`
 	Lyrics      []string         `yaml:"lyrics,omitempty"` // Lyrics per bar
 	Melody      *Melody          `yaml:"melody,omitempty"` // Auto-generated melody settings
 	Scale       *ScaleConfig     `yaml:"scale,omitempty"`  // Scale override settings
+}
+
+// Section represents a named section of the song (verse, chorus, bridge, etc.)
+type Section struct {
+	Name        string           `yaml:"name"`
+	Progression ChordProgression `yaml:"chord_progression"`
 }
 
 // TrackInfo contains metadata about the track
@@ -78,6 +86,11 @@ func LoadTrack(filename string) (*Track, error) {
 		return nil, err
 	}
 
+	// If sections and form are defined, expand them into Progression
+	if len(track.Sections) > 0 && len(track.Form) > 0 {
+		track.expandSections()
+	}
+
 	// Set defaults
 	if track.Progression.BarsPerChord == 0 {
 		track.Progression.BarsPerChord = 1
@@ -87,6 +100,44 @@ func LoadTrack(filename string) (*Track, error) {
 	}
 
 	return &track, nil
+}
+
+// expandSections builds the Progression from Sections and Form
+func (t *Track) expandSections() {
+	// Build a map of section name -> section
+	sectionMap := make(map[string]*Section)
+	for i := range t.Sections {
+		section := &t.Sections[i]
+		sectionMap[section.Name] = section
+		// Set defaults for each section
+		if section.Progression.BarsPerChord == 0 {
+			section.Progression.BarsPerChord = 1
+		}
+	}
+
+	// Expand form into a single pattern
+	var allChords []string
+	for _, sectionName := range t.Form {
+		section, ok := sectionMap[sectionName]
+		if !ok {
+			continue // Skip unknown sections
+		}
+		// Get chords from this section (without repeat applied)
+		chords := section.Progression.GetChords()
+		for _, chord := range chords {
+			// Reconstruct the chord notation with duration
+			if chord.Bars == 1.0 {
+				allChords = append(allChords, chord.Symbol)
+			} else {
+				allChords = append(allChords, chord.Symbol+"*"+strconv.FormatFloat(chord.Bars, 'f', -1, 64))
+			}
+		}
+	}
+
+	// Set the expanded progression
+	t.Progression.Pattern = StringOrList(strings.Join(allChords, " "))
+	t.Progression.BarsPerChord = 1 // Already handled in the pattern
+	t.Progression.Repeat = 1       // Form already specifies the structure
 }
 
 // GetChords parses the pattern string and returns a slice of chords

@@ -179,6 +179,24 @@ chord_progression:
   pattern: "C*2 G*1 Am*2 F*1"  # C for 2 bars, G for 1 bar, etc.
 ```
 
+**Sections & Form** (for complex songs):
+```yaml
+sections:
+  - name: verse
+    chord_progression:
+      pattern: "C G Am F"
+  - name: chorus
+    chord_progression:
+      pattern: "F G C Am"
+
+form:
+  - verse
+  - verse
+  - chorus
+  - verse
+  - chorus
+```
+
 ### Chord Types
 - **Major triads**: C, D, E, F, G, A, B
 - **Minor triads**: Cm, Dm, Em, Am, etc.
@@ -425,6 +443,7 @@ Contributions welcome! See:
 - ✅ **Transpose controls**: Shift song up/down by semitones (↑/↓)
 - ✅ **Capo support**: Set capo in BTML file or adjust live with [/] keys
 - ✅ **Instrument selection**: Choose GM instruments per section (nylon_guitar, slap_bass, etc.)
+- ✅ **Sections & Form**: Define verse/chorus/bridge sections, specify song structure
 - ✅ **Track mute controls**: Mute individual tracks with keys 1-4
 - ✅ **Chord tones fretboard**: Shows all positions for current chord notes
 - ✅ **Synced audio & display**: Controls affect both sound and visuals

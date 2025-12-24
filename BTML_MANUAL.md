@@ -49,12 +49,16 @@ A BTML file has these sections:
 | Section | Required | Description |
 |---------|----------|-------------|
 | `track` | Yes | Metadata (title, key, tempo, style) |
-| `chord_progression` | Yes | The chord sequence |
+| `chord_progression` | Yes* | The chord sequence |
+| `sections` | No | Named sections (verse, chorus, etc.) |
+| `form` | No | Order of sections to play |
 | `rhythm` | No | How chords are played (strum/pick pattern) |
 | `bass` | No | Bass line style |
 | `drums` | No | Drum pattern |
 | `melody` | No | Auto-generated melody line |
 | `scale` | No | Scale override for display/melody |
+
+*Either `chord_progression` OR `sections` + `form` is required.
 
 ---
 
@@ -157,6 +161,78 @@ pattern: "E9 E9 E9 E9 A9 E9 E9 E9"
 
 # Descending Bass (Stairway/Babe I'm Gonna Leave You)
 pattern: "Am Am/G Am/F Am/E"
+```
+
+---
+
+## Sections & Form
+
+For complex songs with verses, choruses, bridges, etc., use `sections` and `form` instead of a single `chord_progression`:
+
+```yaml
+sections:
+  - name: verse
+    chord_progression:
+      pattern: "C G Am F"
+      bars_per_chord: 1
+
+  - name: chorus
+    chord_progression:
+      pattern: "F G C Am"
+      bars_per_chord: 1
+
+  - name: bridge
+    chord_progression:
+      pattern: "Dm Em F G"
+      bars_per_chord: 2
+
+form:
+  - verse
+  - verse
+  - chorus
+  - verse
+  - chorus
+  - bridge
+  - chorus
+  - chorus
+```
+
+### How It Works
+
+1. Define named sections with their own chord progressions
+2. Specify the `form` as a list of section names in order
+3. At parse time, sections are expanded into a flat chord progression
+4. All existing features (rhythm, bass, drums, melody) work unchanged
+
+### Benefits
+
+- **Readable**: Song structure is clear at a glance
+- **DRY**: Define each section once, reuse in form
+- **Flexible**: Easy to rearrange song structure
+- **Compatible**: Expands to standard chord progression internally
+
+### Example: 12-Bar Blues with Intro/Outro
+
+```yaml
+sections:
+  - name: intro
+    chord_progression:
+      pattern: "A7 A7 A7 A7"
+
+  - name: verse
+    chord_progression:
+      pattern: "A7 A7 A7 A7 D7 D7 A7 A7 E7 D7 A7 E7"
+
+  - name: outro
+    chord_progression:
+      pattern: "A7 E7 A7 A7"
+
+form:
+  - intro
+  - verse
+  - verse
+  - verse
+  - outro
 ```
 
 ---
