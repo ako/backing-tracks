@@ -34,6 +34,12 @@ type RealtimePlayer struct {
 	capoPosition    int              // Capo fret position (0 = no capo)
 	mutedTracks     [4]bool          // 0=drums, 1=bass, 2=chords, 3=melody
 
+	// Loop state
+	loopEnabled  bool // Whether loop is active
+	loopStartBar int  // First bar of loop (inclusive)
+	loopEndBar   int  // Last bar of loop (exclusive)
+	loopLength   int  // Number of bars in loop (1-9)
+
 	// Control channels
 	stopChan chan struct{}
 	stopOnce sync.Once
@@ -229,6 +235,17 @@ func (p *RealtimePlayer) playbackLoop() {
 			}
 			currentTick := p.playbackData.TimeToTick(elapsed)
 
+			// Check for loop: if enabled and we've passed the loop end, jump back to loop start
+			if p.loopEnabled && p.loopEndBar > 0 {
+				loopEndTick := p.playbackData.BarToTick(p.loopEndBar)
+				if currentTick >= loopEndTick {
+					// Jump back to loop start
+					p.seekToBarInternal(p.loopStartBar)
+					p.mu.Unlock()
+					continue
+				}
+			}
+
 			// Check if we've reached the end
 			if currentTick >= p.playbackData.TotalTicks {
 				p.mu.Unlock()
@@ -375,6 +392,87 @@ func (p *RealtimePlayer) SeekRelative(bars int) {
 	p.mu.Unlock()
 
 	p.SeekToBar(currentBar + bars)
+}
+
+// seekToBarInternal seeks to a bar (must be called with lock held)
+func (p *RealtimePlayer) seekToBarInternal(bar int) {
+	if bar < 0 {
+		bar = 0
+	}
+	if bar >= p.playbackData.TotalBars {
+		bar = p.playbackData.TotalBars - 1
+	}
+
+	// Stop all current notes
+	for key := range p.activeNotes {
+		p.sendCommand(fmt.Sprintf("noteoff %d %d", key.channel, key.note))
+	}
+	p.activeNotes = make(map[noteKey]bool)
+
+	// Calculate target tick
+	targetTick := p.playbackData.BarToTick(bar)
+	targetTime := p.playbackData.TickToTime(targetTick)
+
+	// Adjust seek offset to jump to target
+	p.seekOffset = targetTime - (time.Since(p.startTime) - p.pausedTotal)
+
+	// Find the event index for the new position
+	p.lastEventIdx = 0
+	for i, evt := range p.playbackData.Events {
+		if evt.Tick >= targetTick {
+			p.lastEventIdx = i
+			break
+		}
+	}
+}
+
+// SetLoop sets or clears the loop. length=0 disables looping.
+// If length > 0, sets a loop from current bar for 'length' bars.
+func (p *RealtimePlayer) SetLoop(length int) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if length <= 0 {
+		// Disable loop
+		p.loopEnabled = false
+		p.loopStartBar = 0
+		p.loopEndBar = 0
+		p.loopLength = 0
+		return
+	}
+
+	// Enable loop from current bar
+	currentBar := p.getCurrentBar()
+	p.loopStartBar = currentBar
+	p.loopEndBar = currentBar + length
+	if p.loopEndBar > p.playbackData.TotalBars {
+		p.loopEndBar = p.playbackData.TotalBars
+	}
+	p.loopLength = length
+	p.loopEnabled = true
+}
+
+// ToggleLoop toggles loop of specified length. If already looping with same length, disables.
+func (p *RealtimePlayer) ToggleLoop(length int) {
+	p.mu.Lock()
+	currentLength := p.loopLength
+	enabled := p.loopEnabled
+	p.mu.Unlock()
+
+	if enabled && currentLength == length {
+		// Same length - toggle off
+		p.SetLoop(0)
+	} else {
+		// Different length or not enabled - set new loop
+		p.SetLoop(length)
+	}
+}
+
+// GetLoop returns the current loop state: enabled, startBar, endBar, length
+func (p *RealtimePlayer) GetLoop() (enabled bool, startBar, endBar, length int) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.loopEnabled, p.loopStartBar, p.loopEndBar, p.loopLength
 }
 
 // getCurrentBar returns the current bar (must be called with lock held)

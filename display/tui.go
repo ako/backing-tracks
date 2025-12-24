@@ -75,6 +75,8 @@ type PlayerController interface {
 	GetCapo() int
 	ToggleTrackMute(track int) // 0=drums, 1=bass, 2=chords, 3=melody
 	IsTrackMuted(track int) bool
+	ToggleLoop(length int)                                 // Toggle loop of N bars from current position
+	GetLoop() (enabled bool, startBar, endBar, length int) // Get loop state
 }
 
 // TUIModel is the Bubbletea model for live display
@@ -283,6 +285,51 @@ func (m *TUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case ".", ">":
 			// Next tuning
 			m.cycleTuning(1)
+		case "!":
+			// Loop 1 bar (Shift+1)
+			if m.player != nil {
+				m.player.ToggleLoop(1)
+			}
+		case "@":
+			// Loop 2 bars (Shift+2)
+			if m.player != nil {
+				m.player.ToggleLoop(2)
+			}
+		case "#":
+			// Loop 3 bars (Shift+3)
+			if m.player != nil {
+				m.player.ToggleLoop(3)
+			}
+		case "$":
+			// Loop 4 bars (Shift+4)
+			if m.player != nil {
+				m.player.ToggleLoop(4)
+			}
+		case "%":
+			// Loop 5 bars (Shift+5)
+			if m.player != nil {
+				m.player.ToggleLoop(5)
+			}
+		case "^":
+			// Loop 6 bars (Shift+6)
+			if m.player != nil {
+				m.player.ToggleLoop(6)
+			}
+		case "&":
+			// Loop 7 bars (Shift+7)
+			if m.player != nil {
+				m.player.ToggleLoop(7)
+			}
+		case "*":
+			// Loop 8 bars (Shift+8)
+			if m.player != nil {
+				m.player.ToggleLoop(8)
+			}
+		case "(":
+			// Loop 9 bars (Shift+9)
+			if m.player != nil {
+				m.player.ToggleLoop(9)
+			}
 		}
 
 	case tea.WindowSizeMsg:
@@ -440,7 +487,17 @@ func (m *TUIModel) renderHeader() string {
 			Render("  ⏸ PAUSED")
 	}
 
-	return fmt.Sprintf("  %s    %s%s%s%s%s%s%s", title, info, capoIndicator, transposeIndicator, tuningIndicator, muteIndicator, scaleName, pauseIndicator)
+	loopIndicator := ""
+	if m.player != nil {
+		if enabled, startBar, endBar, _ := m.player.GetLoop(); enabled {
+			loopIndicator = lipgloss.NewStyle().
+				Bold(true).
+				Foreground(lipgloss.Color("#FF00FF")).
+				Render(fmt.Sprintf("  🔁 LOOP %d-%d", startBar+1, endBar))
+		}
+	}
+
+	return fmt.Sprintf("  %s    %s%s%s%s%s%s%s%s", title, info, capoIndicator, transposeIndicator, tuningIndicator, muteIndicator, scaleName, loopIndicator, pauseIndicator)
 }
 
 // renderLeftColumn renders the chord/beat display
@@ -1202,7 +1259,7 @@ func (m *TUIModel) renderProgressBar() string {
 	filled := int(progress * float64(width))
 	bar := strings.Repeat("▓", filled) + strings.Repeat("░", width-filled)
 
-	controls := headerStyle.Render("  [space] pause  [←/→] seek  [↑/↓] transpose  [[/]] capo+audio  [{/}] capo  [,/.] tuning  [q] quit")
+	controls := headerStyle.Render("  [space] pause  [←/→] seek  [↑/↓] transpose  [[/]] capo+audio  [{/}] capo  [,/.] tuning  [Shift+1-9] loop  [q] quit")
 
 	return fmt.Sprintf("  %s  %d%% (bar %d/%d)%s",
 		progressStyle.Render(bar),
