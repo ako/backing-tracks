@@ -94,6 +94,8 @@ type TUIModel struct {
 	chordChart   *ChordChart
 	currentScale *theory.Scale
 	tuning       theory.Tuning
+	tuningIndex  int    // Index into theory.TuningNames
+	tuningName   string // Current tuning name for display
 
 	// Layout
 	width  int
@@ -120,7 +122,12 @@ func NewTUIModel(track *parser.Track) *TUIModel {
 
 	bars := processChordsIntoBars(track)
 	scale := theory.GetScaleForStyle(track.Info.Key, track.Info.Style, "")
-	tuning := theory.GetTuning(track.Info.Tuning)
+	tuningName := track.Info.Tuning
+	if tuningName == "" {
+		tuningName = "standard"
+	}
+	tuning := theory.GetTuning(tuningName)
+	tuningIndex := theory.GetTuningIndex(tuningName)
 	fretboard := NewFretboardDisplayWithTuning(scale, 15, tuning)
 	fretboard.SetCompactMode(true)
 	chordChart := NewChordChart()
@@ -135,6 +142,8 @@ func NewTUIModel(track *parser.Track) *TUIModel {
 		chordChart:   chordChart,
 		currentScale: scale,
 		tuning:       tuning,
+		tuningIndex:  tuningIndex,
+		tuningName:   tuningName,
 		capoPosition: track.Info.Capo, // Initialize from track
 		playing:      true,
 		width:        120,
@@ -258,6 +267,12 @@ func (m *TUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.player.SetCapo(m.capoPosition)
 				}
 			}
+		case ",", "<":
+			// Previous tuning
+			m.cycleTuning(-1)
+		case ".", ">":
+			// Next tuning
+			m.cycleTuning(1)
 		}
 
 	case tea.WindowSizeMsg:
@@ -398,6 +413,15 @@ func (m *TUIModel) renderHeader() string {
 		scaleName = headerStyle.Render(" │ Scale: " + m.currentScale.Name)
 	}
 
+	// Show tuning indicator
+	tuningIndicator := ""
+	if m.tuningName != "" && m.tuningName != "standard" {
+		tuningIndicator = lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("#66FF66")).
+			Render(fmt.Sprintf("  [%s]", m.tuningName))
+	}
+
 	pauseIndicator := ""
 	if m.paused || (m.player != nil && m.player.IsPaused()) {
 		pauseIndicator = lipgloss.NewStyle().
@@ -406,7 +430,7 @@ func (m *TUIModel) renderHeader() string {
 			Render("  ⏸ PAUSED")
 	}
 
-	return fmt.Sprintf("  %s    %s%s%s%s%s%s", title, info, capoIndicator, transposeIndicator, muteIndicator, scaleName, pauseIndicator)
+	return fmt.Sprintf("  %s    %s%s%s%s%s%s%s", title, info, capoIndicator, transposeIndicator, tuningIndicator, muteIndicator, scaleName, pauseIndicator)
 }
 
 // renderLeftColumn renders the chord/beat display
@@ -879,6 +903,19 @@ func (m *TUIModel) updateTransposedScale() {
 	m.currentScale = theory.GetScaleForStyle(transposedKey, m.track.Info.Style, "")
 }
 
+// cycleTuning changes the tuning by the given offset (-1 for previous, +1 for next)
+func (m *TUIModel) cycleTuning(offset int) {
+	numTunings := len(theory.TuningNames)
+	m.tuningIndex = (m.tuningIndex + offset + numTunings) % numTunings
+	m.tuningName = theory.TuningNames[m.tuningIndex]
+	m.tuning = theory.GetTuning(m.tuningName)
+
+	// Update fretboard display with new tuning
+	if m.fretboard != nil {
+		m.fretboard.SetTuning(m.tuning)
+	}
+}
+
 // renderRightColumn renders the chord charts and picking pattern
 func (m *TUIModel) renderRightColumn() string {
 	var lines []string
@@ -897,7 +934,7 @@ func (m *TUIModel) renderRightColumn() string {
 	var allDiagrams [][]string
 
 	for _, chord := range uniqueChords {
-		voicings := m.chordChart.GetVoicings(chord)
+		voicings := m.chordChart.GetVoicingsForTuning(chord, m.tuningName)
 		if len(voicings) == 0 {
 			continue
 		}
@@ -1100,7 +1137,7 @@ func (m *TUIModel) renderProgressBar() string {
 	filled := int(progress * float64(width))
 	bar := strings.Repeat("▓", filled) + strings.Repeat("░", width-filled)
 
-	controls := headerStyle.Render("  [space] pause  [←/→] seek  [↑/↓] transpose  [[/]] capo  [1-4] mute  [q] quit")
+	controls := headerStyle.Render("  [space] pause  [←/→] seek  [↑/↓] transpose  [[/]] capo  [,/.] tuning  [1-4] mute  [q] quit")
 
 	return fmt.Sprintf("  %s  %d%% (bar %d/%d)%s",
 		progressStyle.Render(bar),

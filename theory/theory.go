@@ -84,6 +84,23 @@ var Tunings = map[string]Tuning{
 	"nashville": {[]int{52, 57, 62, 67, 71, 76}, []string{"e", "a", "d", "g", "b", "e"}}, // Nashville (high strung)
 }
 
+// TuningNames is an ordered list of tuning names for cycling through
+var TuningNames = []string{
+	"standard",
+	"drop_d",
+	"drop_c",
+	"d_standard",
+	"eb_standard",
+	"open_e",
+	"open_d",
+	"open_g",
+	"open_a",
+	"dadgad",
+	"dadgbd",
+	"open_c",
+	"nashville",
+}
+
 // GetTuning returns a tuning by name, defaulting to standard if not found
 func GetTuning(name string) Tuning {
 	if name == "" {
@@ -93,6 +110,19 @@ func GetTuning(name string) Tuning {
 		return tuning
 	}
 	return Tunings["standard"]
+}
+
+// GetTuningIndex returns the index of a tuning name in TuningNames, or 0 if not found
+func GetTuningIndex(name string) int {
+	if name == "" {
+		return 0
+	}
+	for i, n := range TuningNames {
+		if n == name {
+			return i
+		}
+	}
+	return 0
 }
 
 // Scale represents a musical scale with intervals from root
