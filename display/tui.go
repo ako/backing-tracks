@@ -252,7 +252,7 @@ func (m *TUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.player.ToggleTrackMute(3)
 			}
 		case "[":
-			// Move capo down
+			// Move capo down (with audio transpose)
 			if m.capoPosition > 0 {
 				m.capoPosition--
 				if m.player != nil {
@@ -260,12 +260,22 @@ func (m *TUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		case "]":
-			// Move capo up
+			// Move capo up (with audio transpose)
 			if m.capoPosition < 12 {
 				m.capoPosition++
 				if m.player != nil {
 					m.player.SetCapo(m.capoPosition)
 				}
+			}
+		case "{":
+			// Move capo down (visual only, no audio transpose)
+			if m.capoPosition > 0 {
+				m.capoPosition--
+			}
+		case "}":
+			// Move capo up (visual only, no audio transpose)
+			if m.capoPosition < 12 {
+				m.capoPosition++
 			}
 		case ",", "<":
 			// Previous tuning
@@ -664,14 +674,24 @@ func (m *TUIModel) renderMiddleColumn() string {
 
 	var lines []string
 
-	// Scale name
-	lines = append(lines, lipgloss.NewStyle().Bold(true).Render(" "+m.currentScale.Name))
+	// Scale name with capo indicator
+	scaleName := m.currentScale.Name
+	if m.capoPosition > 0 {
+		scaleName = fmt.Sprintf("%s (capo %d)", scaleName, m.capoPosition)
+	}
+	lines = append(lines, lipgloss.NewStyle().Bold(true).Render(" "+scaleName))
 	lines = append(lines, "")
 
 	// Fret numbers (use 3-char columns for proper alignment with double digits)
+	// Highlight the capo position
 	fretLine := "   "
 	for fret := 0; fret <= 12; fret++ {
-		fretLine += fmt.Sprintf("%2d ", fret)
+		if fret == m.capoPosition && m.capoPosition > 0 {
+			// Highlight capo position
+			fretLine += lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00CCCC")).Render(fmt.Sprintf("%2d ", fret))
+		} else {
+			fretLine += fmt.Sprintf("%2d ", fret)
+		}
 	}
 	lines = append(lines, fretLine)
 
@@ -934,11 +954,23 @@ func (m *TUIModel) renderRightColumn() string {
 	var allDiagrams [][]string
 
 	for _, chord := range uniqueChords {
-		voicings := m.chordChart.GetVoicingsForTuning(chord, m.tuningName)
+		// If capo is set, transpose chord DOWN to get the shape to play
+		// e.g., G chord with capo 2 = play F shape (F + capo 2 = G sound)
+		displayChord := chord
+		shapeChord := chord
+		if m.capoPosition > 0 {
+			shapeChord = transposeChord(chord, -m.capoPosition)
+			displayChord = fmt.Sprintf("%s→%s", chord, shapeChord)
+		}
+
+		voicings := m.chordChart.GetVoicingsForTuning(shapeChord, m.tuningName)
 		if len(voicings) == 0 {
 			continue
 		}
-		allDiagrams = append(allDiagrams, m.renderChordDiagram(voicings[0]))
+		// Override the name to show both original and shape
+		voicing := voicings[0]
+		voicing.Name = displayChord
+		allDiagrams = append(allDiagrams, m.renderChordDiagram(voicing))
 	}
 
 	// Arrange 3 per row
@@ -1137,7 +1169,7 @@ func (m *TUIModel) renderProgressBar() string {
 	filled := int(progress * float64(width))
 	bar := strings.Repeat("▓", filled) + strings.Repeat("░", width-filled)
 
-	controls := headerStyle.Render("  [space] pause  [←/→] seek  [↑/↓] transpose  [[/]] capo  [,/.] tuning  [1-4] mute  [q] quit")
+	controls := headerStyle.Render("  [space] pause  [←/→] seek  [↑/↓] transpose  [[/]] capo+audio  [{/}] capo  [,/.] tuning  [q] quit")
 
 	return fmt.Sprintf("  %s  %d%% (bar %d/%d)%s",
 		progressStyle.Render(bar),
