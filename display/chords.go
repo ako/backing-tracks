@@ -3,6 +3,8 @@ package display
 import (
 	"fmt"
 	"strings"
+
+	"backing-tracks/theory"
 )
 
 // ChordVoicing represents finger positions for a chord
@@ -16,18 +18,15 @@ type ChordVoicing struct {
 
 // ChordChart manages chord diagram display
 type ChordChart struct {
-	voicings       map[string][]ChordVoicing            // Standard tuning voicings
-	tuningVoicings map[string]map[string][]ChordVoicing // Tuning-specific voicings [tuning][chord]
+	voicings map[string][]ChordVoicing // Standard tuning voicings
 }
 
 // NewChordChart creates a new chord chart with common voicings
 func NewChordChart() *ChordChart {
 	cc := &ChordChart{
-		voicings:       make(map[string][]ChordVoicing),
-		tuningVoicings: make(map[string]map[string][]ChordVoicing),
+		voicings: make(map[string][]ChordVoicing),
 	}
 	cc.loadVoicings()
-	cc.loadTuningVoicings()
 	return cc
 }
 
@@ -234,196 +233,49 @@ func (cc *ChordChart) loadVoicings() {
 	cc.voicings["Ab"] = cc.voicings["G#"]
 }
 
-// loadTuningVoicings populates tuning-specific chord voicings
-func (cc *ChordChart) loadTuningVoicings() {
-	// Drop D tuning voicings
-	// Low string is now D, allowing for different fingerings
-	dropD := make(map[string][]ChordVoicing)
-
-	// Power chords are easier in drop D (one finger barre)
-	dropD["D5"] = []ChordVoicing{
-		{Name: "D5", Frets: [6]int{0, 0, 0, -1, -1, -1}, BaseFret: 0},
-	}
-	dropD["E5"] = []ChordVoicing{
-		{Name: "E5", Frets: [6]int{2, 2, 2, -1, -1, -1}, BaseFret: 2},
-	}
-	dropD["F5"] = []ChordVoicing{
-		{Name: "F5", Frets: [6]int{3, 3, 3, -1, -1, -1}, BaseFret: 3},
-	}
-	dropD["G5"] = []ChordVoicing{
-		{Name: "G5", Frets: [6]int{5, 5, 5, -1, -1, -1}, BaseFret: 5},
-	}
-	dropD["A5"] = []ChordVoicing{
-		{Name: "A5", Frets: [6]int{7, 7, 7, -1, -1, -1}, BaseFret: 7},
-	}
-	dropD["B5"] = []ChordVoicing{
-		{Name: "B5", Frets: [6]int{9, 9, 9, -1, -1, -1}, BaseFret: 9},
-	}
-	dropD["C5"] = []ChordVoicing{
-		{Name: "C5", Frets: [6]int{10, 10, 10, -1, -1, -1}, BaseFret: 10},
-	}
-
-	// D-based chords with open low D
-	dropD["D"] = []ChordVoicing{
-		{Name: "D", Frets: [6]int{0, 0, 0, 2, 3, 2}, BaseFret: 0},
-	}
-	dropD["Dm"] = []ChordVoicing{
-		{Name: "Dm", Frets: [6]int{0, 0, 0, 2, 3, 1}, BaseFret: 0},
-	}
-	dropD["D7"] = []ChordVoicing{
-		{Name: "D7", Frets: [6]int{0, 0, 0, 2, 1, 2}, BaseFret: 0},
-	}
-	dropD["Dmaj7"] = []ChordVoicing{
-		{Name: "Dmaj7", Frets: [6]int{0, 0, 0, 2, 2, 2}, BaseFret: 0},
-	}
-	dropD["Dm7"] = []ChordVoicing{
-		{Name: "Dm7", Frets: [6]int{0, 0, 0, 2, 1, 1}, BaseFret: 0},
-	}
-	dropD["Dsus2"] = []ChordVoicing{
-		{Name: "Dsus2", Frets: [6]int{0, 0, 0, 2, 3, 0}, BaseFret: 0},
-	}
-	dropD["Dsus4"] = []ChordVoicing{
-		{Name: "Dsus4", Frets: [6]int{0, 0, 0, 2, 3, 3}, BaseFret: 0},
-	}
-
-	// Other common chords in drop D
-	dropD["G"] = []ChordVoicing{
-		{Name: "G", Frets: [6]int{5, 5, 5, 4, 3, 3}, BaseFret: 3},
-		{Name: "G (open)", Frets: [6]int{5, 2, 0, 0, 0, 3}, BaseFret: 0},
-	}
-	dropD["A"] = []ChordVoicing{
-		{Name: "A", Frets: [6]int{7, 7, 7, 6, 5, 5}, BaseFret: 5},
-		{Name: "A (open)", Frets: [6]int{-1, 0, 2, 2, 2, 0}, BaseFret: 0},
-	}
-	dropD["Am"] = []ChordVoicing{
-		{Name: "Am", Frets: [6]int{7, 7, 7, 5, 5, 5}, BaseFret: 5},
-		{Name: "Am (open)", Frets: [6]int{-1, 0, 2, 2, 1, 0}, BaseFret: 0},
-	}
-	dropD["E"] = []ChordVoicing{
-		{Name: "E", Frets: [6]int{2, 2, 2, 1, 0, 0}, BaseFret: 0},
-	}
-	dropD["Em"] = []ChordVoicing{
-		{Name: "Em", Frets: [6]int{2, 2, 2, 0, 0, 0}, BaseFret: 0},
-	}
-	dropD["F"] = []ChordVoicing{
-		{Name: "F", Frets: [6]int{3, 3, 3, 2, 1, 1}, BaseFret: 1},
-	}
-	dropD["Bm"] = []ChordVoicing{
-		{Name: "Bm", Frets: [6]int{9, 9, 9, 7, 7, 7}, BaseFret: 7},
-	}
-	dropD["C"] = []ChordVoicing{
-		{Name: "C", Frets: [6]int{10, 10, 10, 9, 8, 8}, BaseFret: 8},
-		{Name: "C (open)", Frets: [6]int{-1, 3, 2, 0, 1, 0}, BaseFret: 0},
-	}
-
-	// Sus2 chords common in rock (like Everlong)
-	dropD["Bsus2"] = []ChordVoicing{
-		{Name: "Bsus2", Frets: [6]int{9, 9, 9, 8, 7, 7}, BaseFret: 7},
-		{Name: "Bsus2 (alt)", Frets: [6]int{-1, 2, 4, 4, 2, 2}, BaseFret: 2},
-	}
-	dropD["Gsus2"] = []ChordVoicing{
-		{Name: "Gsus2", Frets: [6]int{5, 5, 5, 4, 3, 3}, BaseFret: 3},
-		{Name: "Gsus2 (open)", Frets: [6]int{5, 0, 0, 0, 3, 3}, BaseFret: 0},
-	}
-	dropD["Asus2"] = []ChordVoicing{
-		{Name: "Asus2", Frets: [6]int{7, 7, 7, 6, 5, 5}, BaseFret: 5},
-		{Name: "Asus2 (open)", Frets: [6]int{-1, 0, 2, 2, 0, 0}, BaseFret: 0},
-	}
-	dropD["Esus2"] = []ChordVoicing{
-		{Name: "Esus2", Frets: [6]int{2, 2, 4, 4, 0, 0}, BaseFret: 0},
-	}
-
-	cc.tuningVoicings["drop_d"] = dropD
-
-	// Open G tuning voicings (Keith Richards style)
-	openG := make(map[string][]ChordVoicing)
-	openG["G"] = []ChordVoicing{
-		{Name: "G", Frets: [6]int{0, 0, 0, 0, 0, 0}, BaseFret: 0},
-	}
-	openG["A"] = []ChordVoicing{
-		{Name: "A", Frets: [6]int{2, 2, 2, 2, 2, 2}, BaseFret: 2},
-	}
-	openG["C"] = []ChordVoicing{
-		{Name: "C", Frets: [6]int{5, 5, 5, 5, 5, 5}, BaseFret: 5},
-	}
-	openG["D"] = []ChordVoicing{
-		{Name: "D", Frets: [6]int{7, 7, 7, 7, 7, 7}, BaseFret: 7},
-	}
-	cc.tuningVoicings["open_g"] = openG
-
-	// Open D tuning voicings
-	openD := make(map[string][]ChordVoicing)
-	openD["D"] = []ChordVoicing{
-		{Name: "D", Frets: [6]int{0, 0, 0, 0, 0, 0}, BaseFret: 0},
-	}
-	openD["E"] = []ChordVoicing{
-		{Name: "E", Frets: [6]int{2, 2, 2, 2, 2, 2}, BaseFret: 2},
-	}
-	openD["G"] = []ChordVoicing{
-		{Name: "G", Frets: [6]int{5, 5, 5, 5, 5, 5}, BaseFret: 5},
-	}
-	openD["A"] = []ChordVoicing{
-		{Name: "A", Frets: [6]int{7, 7, 7, 7, 7, 7}, BaseFret: 7},
-	}
-	cc.tuningVoicings["open_d"] = openD
-
-	// Open E tuning voicings
-	openE := make(map[string][]ChordVoicing)
-	openE["E"] = []ChordVoicing{
-		{Name: "E", Frets: [6]int{0, 0, 0, 0, 0, 0}, BaseFret: 0},
-	}
-	openE["A"] = []ChordVoicing{
-		{Name: "A", Frets: [6]int{5, 5, 5, 5, 5, 5}, BaseFret: 5},
-	}
-	openE["B"] = []ChordVoicing{
-		{Name: "B", Frets: [6]int{7, 7, 7, 7, 7, 7}, BaseFret: 7},
-	}
-	cc.tuningVoicings["open_e"] = openE
-
-	// DADGAD tuning voicings
-	dadgad := make(map[string][]ChordVoicing)
-	dadgad["D"] = []ChordVoicing{
-		{Name: "D", Frets: [6]int{0, 0, 0, 0, 0, 0}, BaseFret: 0},
-	}
-	dadgad["Dsus4"] = []ChordVoicing{
-		{Name: "Dsus4", Frets: [6]int{0, 0, 0, 0, 0, 0}, BaseFret: 0},
-	}
-	dadgad["G"] = []ChordVoicing{
-		{Name: "G", Frets: [6]int{5, 5, 5, 5, 5, 5}, BaseFret: 5},
-	}
-	dadgad["A"] = []ChordVoicing{
-		{Name: "A", Frets: [6]int{7, 7, 7, 7, 7, 7}, BaseFret: 7},
-	}
-	cc.tuningVoicings["dadgad"] = dadgad
-}
-
 // GetVoicings returns all voicings for a chord symbol (standard tuning)
 func (cc *ChordChart) GetVoicings(symbol string) []ChordVoicing {
 	return cc.GetVoicingsForTuning(symbol, "standard")
 }
 
 // GetVoicingsForTuning returns voicings for a chord in a specific tuning
-func (cc *ChordChart) GetVoicingsForTuning(symbol, tuning string) []ChordVoicing {
-	// Check for tuning-specific voicings first
-	if tuning != "" && tuning != "standard" {
-		if tuningChords, ok := cc.tuningVoicings[tuning]; ok {
-			if voicings, ok := tuningChords[symbol]; ok {
-				return voicings
+func (cc *ChordChart) GetVoicingsForTuning(symbol, tuningName string) []ChordVoicing {
+	// For standard tuning, use predefined voicings if available
+	if tuningName == "" || tuningName == "standard" {
+		if voicings, ok := cc.voicings[symbol]; ok {
+			return voicings
+		}
+		normalized := normalizeChordSymbol(symbol)
+		if voicings, ok := cc.voicings[normalized]; ok {
+			return voicings
+		}
+		// Fall through to dynamic generation for unknown chords
+	}
+
+	// Generate voicing dynamically based on tuning
+	tuning := theory.GetTuning(tuningName)
+	if len(tuning.Notes) > 0 {
+		generated := theory.GenerateChordVoicing(symbol, tuning)
+		// Check if valid (at least 3 strings used)
+		stringsUsed := 0
+		for _, f := range generated.Frets {
+			if f >= 0 {
+				stringsUsed++
 			}
-			// Try normalized
-			normalized := normalizeChordSymbol(symbol)
-			if voicings, ok := tuningChords[normalized]; ok {
-				return voicings
-			}
+		}
+		if stringsUsed >= 3 {
+			return []ChordVoicing{{
+				Name:     symbol,
+				Frets:    generated.Frets,
+				BaseFret: generated.BaseFret,
+			}}
 		}
 	}
 
-	// Fall back to standard voicings
+	// Final fallback to standard voicings (for unknown chords)
 	if voicings, ok := cc.voicings[symbol]; ok {
 		return voicings
 	}
-
-	// Try normalized version (handle variations like Amin, Ami -> Am)
 	normalized := normalizeChordSymbol(symbol)
 	if voicings, ok := cc.voicings[normalized]; ok {
 		return voicings

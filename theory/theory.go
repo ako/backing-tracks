@@ -436,6 +436,253 @@ func GetChordTones(chordSymbol string) []int {
 	return tones
 }
 
+// ChordVoicing represents a chord fingering on guitar
+type ChordVoicing struct {
+	Frets    [6]int // -1 = muted, 0 = open, 1+ = fret number
+	BaseFret int    // Starting fret for display
+}
+
+// GenerateChordVoicing creates a chord voicing for any tuning
+func GenerateChordVoicing(chordSymbol string, tuning Tuning) ChordVoicing {
+	chordTones := GetChordTones(chordSymbol)
+	if len(chordTones) == 0 {
+		return ChordVoicing{Frets: [6]int{-1, -1, -1, -1, -1, -1}}
+	}
+
+	root := chordTones[0]
+	numStrings := len(tuning.Notes)
+	if numStrings > 6 {
+		numStrings = 6
+	}
+
+	// Find all possible fret positions for each string
+	// stringFrets[string][chordToneIndex] = fret position (-1 if not available in range)
+	type fretOption struct {
+		fret      int
+		toneIndex int // 0=root, 1=3rd, 2=5th, 3=7th
+		isRoot    bool
+	}
+
+	stringOptions := make([][]fretOption, numStrings)
+	for str := 0; str < numStrings; str++ {
+		openNote := tuning.Notes[str] % 12
+		for fret := 0; fret <= 12; fret++ {
+			noteAtFret := (openNote + fret) % 12
+			for toneIdx, tone := range chordTones {
+				if noteAtFret == tone {
+					stringOptions[str] = append(stringOptions[str], fretOption{
+						fret:      fret,
+						toneIndex: toneIdx,
+						isRoot:    tone == root,
+					})
+				}
+			}
+		}
+	}
+
+	// Try to find the best voicing
+	// Strategy: Find root on bass string, then fill in other notes within 4 frets
+	bestVoicing := ChordVoicing{Frets: [6]int{-1, -1, -1, -1, -1, -1}}
+	bestScore := -1
+
+	// Try each possible root position on lower strings (0, 1, 2)
+	for bassStr := 0; bassStr < 3 && bassStr < numStrings; bassStr++ {
+		for _, rootOpt := range stringOptions[bassStr] {
+			if !rootOpt.isRoot {
+				continue
+			}
+
+			voicing := [6]int{-1, -1, -1, -1, -1, -1}
+			voicing[bassStr] = rootOpt.fret
+			baseFret := rootOpt.fret
+			if baseFret == 0 {
+				baseFret = 1
+			}
+
+			// For each higher string, find a chord tone within 4 frets of base
+			usedTones := make(map[int]bool)
+			usedTones[0] = true // Root is used
+
+			for str := bassStr + 1; str < numStrings; str++ {
+				bestOpt := fretOption{fret: -1}
+				bestOptScore := -1
+
+				for _, opt := range stringOptions[str] {
+					// Check if within playable range
+					fretDiff := opt.fret - baseFret
+					if opt.fret > 0 && (fretDiff < -1 || fretDiff > 4) {
+						continue
+					}
+
+					// Score this option
+					score := 0
+					if opt.fret == 0 {
+						score += 3 // Prefer open strings
+					}
+					if !usedTones[opt.toneIndex] {
+						score += 2 // Prefer adding new chord tones
+					}
+					if opt.toneIndex == 0 {
+						score += 1 // Roots are good
+					}
+
+					if score > bestOptScore {
+						bestOptScore = score
+						bestOpt = opt
+					}
+				}
+
+				if bestOpt.fret >= 0 {
+					voicing[str] = bestOpt.fret
+					usedTones[bestOpt.toneIndex] = true
+				}
+			}
+
+			// Mute strings below the bass note
+			for str := 0; str < bassStr; str++ {
+				voicing[str] = -1
+			}
+
+			// Score this voicing
+			score := 0
+			tonesUsed := len(usedTones)
+			stringsUsed := 0
+			openStrings := 0
+			for _, f := range voicing {
+				if f >= 0 {
+					stringsUsed++
+				}
+				if f == 0 {
+					openStrings++
+				}
+			}
+
+			score = tonesUsed*10 + stringsUsed*5 + openStrings*3
+			if baseFret <= 3 {
+				score += 5 // Prefer lower positions
+			}
+
+			if score > bestScore {
+				bestScore = score
+				bestVoicing = ChordVoicing{Frets: voicing, BaseFret: baseFret}
+			}
+		}
+	}
+
+	// If no root-based voicing found, try any voicing
+	if bestScore < 0 {
+		// Fallback: just find any playable combination
+		for baseFret := 0; baseFret <= 5; baseFret++ {
+			voicing := [6]int{-1, -1, -1, -1, -1, -1}
+			found := false
+			for str := 0; str < numStrings; str++ {
+				for _, opt := range stringOptions[str] {
+					if opt.fret >= baseFret && opt.fret <= baseFret+4 {
+						voicing[str] = opt.fret
+						found = true
+						break
+					}
+				}
+			}
+			if found {
+				bestVoicing = ChordVoicing{Frets: voicing, BaseFret: baseFret}
+				break
+			}
+		}
+	}
+
+	return bestVoicing
+}
+
+// GenerateMultipleVoicings creates several voicing options for a chord
+func GenerateMultipleVoicings(chordSymbol string, tuning Tuning, maxVoicings int) []ChordVoicing {
+	chordTones := GetChordTones(chordSymbol)
+	if len(chordTones) == 0 {
+		return nil
+	}
+
+	root := chordTones[0]
+	numStrings := len(tuning.Notes)
+	if numStrings > 6 {
+		numStrings = 6
+	}
+
+	// Find all fret positions for each string
+	type fretOption struct {
+		fret      int
+		toneIndex int
+		isRoot    bool
+	}
+
+	stringOptions := make([][]fretOption, numStrings)
+	for str := 0; str < numStrings; str++ {
+		openNote := tuning.Notes[str] % 12
+		for fret := 0; fret <= 14; fret++ {
+			noteAtFret := (openNote + fret) % 12
+			for toneIdx, tone := range chordTones {
+				if noteAtFret == tone {
+					stringOptions[str] = append(stringOptions[str], fretOption{
+						fret:      fret,
+						toneIndex: toneIdx,
+						isRoot:    tone == root,
+					})
+				}
+			}
+		}
+	}
+
+	var voicings []ChordVoicing
+	seen := make(map[string]bool)
+
+	// Generate voicings starting from different bass positions
+	for bassStr := 0; bassStr < 3 && bassStr < numStrings; bassStr++ {
+		for _, rootOpt := range stringOptions[bassStr] {
+			if !rootOpt.isRoot {
+				continue
+			}
+			if len(voicings) >= maxVoicings {
+				break
+			}
+
+			voicing := [6]int{-1, -1, -1, -1, -1, -1}
+			voicing[bassStr] = rootOpt.fret
+			baseFret := rootOpt.fret
+			if baseFret == 0 {
+				baseFret = 1
+			}
+
+			// Fill higher strings
+			for str := bassStr + 1; str < numStrings; str++ {
+				for _, opt := range stringOptions[str] {
+					fretDiff := opt.fret - baseFret
+					if opt.fret == 0 || (fretDiff >= -1 && fretDiff <= 4) {
+						voicing[str] = opt.fret
+						break
+					}
+				}
+			}
+
+			// Mute lower strings
+			for str := 0; str < bassStr; str++ {
+				voicing[str] = -1
+			}
+
+			// Create key for deduplication
+			key := ""
+			for _, f := range voicing {
+				key += string(rune('0' + f + 2)) // Offset to avoid negative
+			}
+
+			if !seen[key] {
+				seen[key] = true
+				voicings = append(voicings, ChordVoicing{Frets: voicing, BaseFret: baseFret})
+			}
+		}
+	}
+
+	return voicings
+}
+
 // ScaleTypeFromString converts a string to ScaleType
 func ScaleTypeFromString(s string) ScaleType {
 	s = strings.ToLower(strings.TrimSpace(s))
