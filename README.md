@@ -144,6 +144,7 @@ During playback, you'll see:
 | `{` / `}` | Move visual capo down / up (display only, no audio change) |
 | `<` / `>` | Cycle through guitar tunings |
 | `Shift+1-9` | Loop current bar + next N-1 bars (press again to disable) |
+| `Shift+0` | Loop current section (press again to disable) |
 | `1` | Toggle drums mute |
 | `2` | Toggle bass mute |
 | `3` | Toggle chords mute |
@@ -225,6 +226,13 @@ form:
   - verse
   - chorus
 ```
+
+**Inline Section Markers** (simpler alternative):
+```yaml
+chord_progression:
+  pattern: "[Intro] Em | [Verse] Am G C D | [Chorus] G D Em C | [Outro] Em"
+```
+Section markers like `[Verse]` or `[Chorus]` are displayed during playback and can be looped with `Shift+0`.
 
 ### Chord Types
 - **Major triads**: C, D, E, F, G, A, B

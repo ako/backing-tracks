@@ -24,7 +24,8 @@ type PlaybackData struct {
 	TotalTicks   uint32
 	TotalBars    int
 	Tempo        int
-	TickDuration time.Duration // Duration of one tick
+	TickDuration time.Duration       // Duration of one tick
+	Sections     []parser.SectionInfo // Section boundaries
 }
 
 // GeneratePlaybackData creates playback data from a track
@@ -165,7 +166,19 @@ func GeneratePlaybackData(track *parser.Track) *PlaybackData {
 		TotalBars:    totalBars,
 		Tempo:        track.Info.Tempo,
 		TickDuration: tickDuration,
+		Sections:     track.Progression.GetSections(),
 	}
+}
+
+// GetSectionAtBar returns the section containing the given bar, or nil if no section
+func (p *PlaybackData) GetSectionAtBar(bar int) *parser.SectionInfo {
+	for i := range p.Sections {
+		s := &p.Sections[i]
+		if bar >= s.StartBar && bar < s.EndBar {
+			return s
+		}
+	}
+	return nil
 }
 
 // GetEventsInRange returns events within a tick range

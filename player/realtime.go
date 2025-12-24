@@ -497,6 +497,63 @@ func (p *RealtimePlayer) GetTempo() (effectiveBPM int, offset int) {
 	return p.playbackData.Tempo + p.tempoOffset, p.tempoOffset
 }
 
+// GetCurrentSection returns the section at the current playback position
+func (p *RealtimePlayer) GetCurrentSection() (name string, startBar, endBar int) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	currentBar := p.getCurrentBar()
+	section := p.playbackData.GetSectionAtBar(currentBar)
+	if section == nil {
+		return "", 0, 0
+	}
+	return section.Name, section.StartBar, section.EndBar
+}
+
+// LoopCurrentSection sets the loop to the current section
+func (p *RealtimePlayer) LoopCurrentSection() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	currentBar := p.getCurrentBar()
+	section := p.playbackData.GetSectionAtBar(currentBar)
+	if section == nil {
+		// No section at current position - disable loop
+		p.loopEnabled = false
+		p.loopStartBar = 0
+		p.loopEndBar = 0
+		p.loopLength = 0
+		return
+	}
+
+	// If already looping this section, toggle off
+	if p.loopEnabled && p.loopStartBar == section.StartBar && p.loopEndBar == section.EndBar {
+		p.loopEnabled = false
+		p.loopStartBar = 0
+		p.loopEndBar = 0
+		p.loopLength = 0
+		return
+	}
+
+	// Set loop to current section
+	p.loopEnabled = true
+	p.loopStartBar = section.StartBar
+	p.loopEndBar = section.EndBar
+	p.loopLength = section.EndBar - section.StartBar
+}
+
+// GetSections returns all sections in the track
+func (p *RealtimePlayer) GetSections() []struct{ Name string; StartBar, EndBar int } {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	result := make([]struct{ Name string; StartBar, EndBar int }, len(p.playbackData.Sections))
+	for i, s := range p.playbackData.Sections {
+		result[i] = struct{ Name string; StartBar, EndBar int }{s.Name, s.StartBar, s.EndBar}
+	}
+	return result
+}
+
 // getSpeedAdjustedElapsed returns the elapsed playback time adjusted for tempo changes (must be called with lock held)
 func (p *RealtimePlayer) getSpeedAdjustedElapsed() time.Duration {
 	realElapsed := time.Since(p.startTime) - p.pausedTotal + p.seekOffset

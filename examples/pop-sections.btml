@@ -1,0 +1,27 @@
+track:
+  title: "Pop Song with Sections"
+  key: G
+  tempo: 120
+  time_signature: 4/4
+  style: pop
+
+chord_progression:
+  pattern: "[Intro] G | [Verse] G D Em C G D Em C | [Chorus] C D G Em C D G | [Bridge] Am D Am D | [Outro] G D C G"
+  bars_per_chord: 1
+
+rhythm:
+  style: strum_up_down
+  instrument: steel_guitar
+
+bass:
+  style: root_fifth
+  instrument: fingered_bass
+
+drums:
+  style: rock_beat
+  intensity: 0.7
+
+melody:
+  enabled: true
+  style: moderate
+  density: 0.4

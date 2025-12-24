@@ -79,6 +79,8 @@ type PlayerController interface {
 	GetLoop() (enabled bool, startBar, endBar, length int) // Get loop state
 	AdjustTempo(deltaBPM int)                              // Adjust playback tempo by delta BPM
 	GetTempo() (effectiveBPM int, offset int)              // Get current effective tempo and offset
+	GetCurrentSection() (name string, startBar, endBar int) // Get current section info
+	LoopCurrentSection()                                    // Toggle loop for current section
 }
 
 // TUIModel is the Bubbletea model for live display
@@ -342,6 +344,11 @@ func (m *TUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.player != nil {
 				m.player.AdjustTempo(-5)
 			}
+		case ")":
+			// Loop current section (Shift+0)
+			if m.player != nil {
+				m.player.LoopCurrentSection()
+			}
 		}
 
 	case tea.WindowSizeMsg:
@@ -508,6 +515,17 @@ func (m *TUIModel) renderHeader() string {
 			Render(fmt.Sprintf("  [%s]", m.tuningName))
 	}
 
+	// Show current section
+	sectionIndicator := ""
+	if m.player != nil {
+		if name, _, _ := m.player.GetCurrentSection(); name != "" {
+			sectionIndicator = lipgloss.NewStyle().
+				Bold(true).
+				Foreground(lipgloss.Color("#FFAA00")).
+				Render(fmt.Sprintf("  § %s", name))
+		}
+	}
+
 	pauseIndicator := ""
 	if m.paused || (m.player != nil && m.player.IsPaused()) {
 		pauseIndicator = lipgloss.NewStyle().
@@ -526,7 +544,7 @@ func (m *TUIModel) renderHeader() string {
 		}
 	}
 
-	return fmt.Sprintf("  %s    %s%s%s%s%s%s%s%s", title, info, capoIndicator, transposeIndicator, tuningIndicator, muteIndicator, scaleName, loopIndicator, pauseIndicator)
+	return fmt.Sprintf("  %s    %s%s%s%s%s%s%s%s%s", title, info, sectionIndicator, capoIndicator, transposeIndicator, tuningIndicator, muteIndicator, scaleName, loopIndicator, pauseIndicator)
 }
 
 // renderLeftColumn renders the chord/beat display
@@ -1288,7 +1306,7 @@ func (m *TUIModel) renderProgressBar() string {
 	filled := int(progress * float64(width))
 	bar := strings.Repeat("▓", filled) + strings.Repeat("░", width-filled)
 
-	controls := headerStyle.Render("  [space] pause  [←/→] seek  [↑/↓] transpose  [Shift+↑/↓] tempo  [[/]] capo  [Shift+1-9] loop  [q] quit")
+	controls := headerStyle.Render("  [space] pause  [←/→] seek  [↑/↓] transpose  [Shift+↑/↓] tempo  [[/]] capo  [Shift+1-9] loop  [Shift+0] section loop  [q] quit")
 
 	return fmt.Sprintf("  %s  %d%% (bar %d/%d)%s",
 		progressStyle.Render(bar),

@@ -71,8 +71,16 @@ func (s *StringOrList) UnmarshalYAML(node *yaml.Node) error {
 
 // Chord represents a single chord with duration
 type Chord struct {
-	Symbol string
-	Bars   float64  // Supports fractional bars (0.5, 1.5, 2.0, etc.)
+	Symbol  string
+	Bars    float64 // Supports fractional bars (0.5, 1.5, 2.0, etc.)
+	Section string  // Section name this chord belongs to (optional)
+}
+
+// SectionInfo represents a section's position in the song
+type SectionInfo struct {
+	Name     string
+	StartBar int // Inclusive
+	EndBar   int // Exclusive
 }
 
 // LoadTrack reads and parses a BTML file
@@ -143,15 +151,28 @@ func (t *Track) expandSections() {
 
 // GetChords parses the pattern string and returns a slice of chords
 // Supports inline duration notation: "Em*2" = Em for 2 bars, "G*0.5" = G for half a bar
+// Supports inline section markers: "[Verse] Am G | [Chorus] C G"
 func (cp *ChordProgression) GetChords() []Chord {
 	parts := strings.Fields(string(cp.Pattern))
 	chords := make([]Chord, 0, len(parts))
+	currentSection := ""
 
 	for _, part := range parts {
+		// Check for section marker [SectionName]
+		if strings.HasPrefix(part, "[") && strings.HasSuffix(part, "]") {
+			currentSection = part[1 : len(part)-1]
+			continue
+		}
+		// Skip bar separators
+		if part == "|" {
+			continue
+		}
+
 		symbol, bars := parseChordWithDuration(part, cp.BarsPerChord)
 		chords = append(chords, Chord{
-			Symbol: symbol,
-			Bars:   bars,
+			Symbol:  symbol,
+			Bars:    bars,
+			Section: currentSection,
 		})
 	}
 
@@ -164,6 +185,42 @@ func (cp *ChordProgression) GetChords() []Chord {
 	}
 
 	return chords
+}
+
+// GetSections returns all sections with their bar ranges
+func (cp *ChordProgression) GetSections() []SectionInfo {
+	chords := cp.GetChords()
+	var sections []SectionInfo
+	currentSection := ""
+	currentBar := 0
+	sectionStartBar := 0
+
+	for _, chord := range chords {
+		if chord.Section != currentSection {
+			// Save previous section if it had a name
+			if currentSection != "" {
+				sections = append(sections, SectionInfo{
+					Name:     currentSection,
+					StartBar: sectionStartBar,
+					EndBar:   currentBar,
+				})
+			}
+			currentSection = chord.Section
+			sectionStartBar = currentBar
+		}
+		currentBar += int(math.Ceil(chord.Bars))
+	}
+
+	// Don't forget the last section
+	if currentSection != "" {
+		sections = append(sections, SectionInfo{
+			Name:     currentSection,
+			StartBar: sectionStartBar,
+			EndBar:   currentBar,
+		})
+	}
+
+	return sections
 }
 
 // parseChordWithDuration extracts chord symbol and duration
