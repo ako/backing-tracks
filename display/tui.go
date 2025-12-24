@@ -93,6 +93,7 @@ type TUIModel struct {
 	fretboard    *FretboardDisplay
 	chordChart   *ChordChart
 	currentScale *theory.Scale
+	tuning       theory.Tuning
 
 	// Layout
 	width  int
@@ -133,6 +134,7 @@ func NewTUIModel(track *parser.Track) *TUIModel {
 		fretboard:    fretboard,
 		chordChart:   chordChart,
 		currentScale: scale,
+		tuning:       tuning,
 		capoPosition: track.Info.Capo, // Initialize from track
 		playing:      true,
 		width:        120,
@@ -649,13 +651,22 @@ func (m *TUIModel) renderMiddleColumn() string {
 	}
 	lines = append(lines, fretLine)
 
-	// Strings (high to low)
-	stringNames := []string{"e", "B", "G", "D", "A", "E"}
-	positions, roots := m.currentScale.GetFretboardPositions(12)
+	// Strings (high to low) - use tuning names
+	tuning := m.tuning
+	if len(tuning.Names) == 0 {
+		tuning = theory.GetTuning("standard")
+	}
+	numStrings := len(tuning.Names)
+	positions, roots := m.currentScale.GetFretboardPositionsWithTuning(12, tuning)
 
-	for idx, name := range stringNames {
-		stringIdx := 5 - idx // Reverse order
-		line := fmt.Sprintf(" %s ", name)
+	for idx := 0; idx < numStrings; idx++ {
+		stringIdx := numStrings - 1 - idx // Reverse order (high to low)
+		name := tuning.Names[stringIdx]
+		// Pad name for alignment
+		if len(name) == 1 {
+			name = " " + name
+		}
+		line := fmt.Sprintf("%s ", name)
 
 		for fret := 0; fret <= 12; fret++ {
 			if roots[stringIdx][fret] {
@@ -721,8 +732,12 @@ func (m *TUIModel) renderChordTonesFretboard() []string {
 	// Root note for highlighting
 	rootTone := chordTones[0]
 
-	// Standard tuning: E A D G B E (MIDI notes 40, 45, 50, 55, 59, 64)
-	openStrings := []int{40, 45, 50, 55, 59, 64} // Low E to high E
+	// Use tuning from track
+	tuning := m.tuning
+	if len(tuning.Names) == 0 {
+		tuning = theory.GetTuning("standard")
+	}
+	numStrings := len(tuning.Notes)
 
 	// Fret numbers
 	fretLine := "   "
@@ -732,12 +747,15 @@ func (m *TUIModel) renderChordTonesFretboard() []string {
 	lines = append(lines, fretLine)
 
 	// Strings (high to low for display)
-	stringNames := []string{"e", "B", "G", "D", "A", "E"}
-
-	for idx, name := range stringNames {
-		stringIdx := 5 - idx // Reverse to match display order
-		openNote := openStrings[stringIdx]
-		line := fmt.Sprintf(" %s ", name)
+	for idx := 0; idx < numStrings; idx++ {
+		stringIdx := numStrings - 1 - idx // Reverse to match display order
+		openNote := tuning.Notes[stringIdx]
+		name := tuning.Names[stringIdx]
+		// Pad name for alignment
+		if len(name) == 1 {
+			name = " " + name
+		}
+		line := fmt.Sprintf("%s ", name)
 
 		for fret := 0; fret <= 12; fret++ {
 			noteAtFret := (openNote + fret) % 12
