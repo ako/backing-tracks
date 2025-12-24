@@ -1110,9 +1110,9 @@ func (m *TUIModel) renderRightColumn() string {
 		allDiagrams = append(allDiagrams, m.renderChordDiagram(voicing))
 	}
 
-	// Arrange 3 per row
-	chartsPerRow := 3
-	chartWidth := 22
+	// Arrange 4 per row
+	chartsPerRow := 4
+	chartWidth := 20
 
 	for i := 0; i < len(allDiagrams); i += chartsPerRow {
 		end := i + chartsPerRow
