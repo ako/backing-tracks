@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"backing-tracks/midi"
 	"backing-tracks/parser"
 	"backing-tracks/theory"
 
@@ -75,6 +76,8 @@ type PlayerController interface {
 	GetCapo() int
 	ToggleTrackMute(track int) // 0=drums, 1=bass, 2=chords, 3=melody, 4=fingerstyle
 	IsTrackMuted(track int) bool
+	SetFingerstylePattern(pattern midi.PatternType)
+	GetFingerstylePattern() midi.PatternType
 	ToggleLoop(length int)                                 // Toggle loop of N bars from current position
 	GetLoop() (enabled bool, startBar, endBar, length int) // Get loop state
 	AdjustTempo(deltaBPM int)                              // Adjust playback tempo by delta BPM
@@ -388,12 +391,20 @@ func (m *TUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case ";":
 			// Previous pattern type
 			if m.tablature != nil {
-				m.tablature.PrevPattern()
+				newPattern := m.tablature.PrevPattern()
+				// Also update the audio player
+				if m.player != nil {
+					m.player.SetFingerstylePattern(newPattern)
+				}
 			}
 		case "'":
 			// Next pattern type
 			if m.tablature != nil {
-				m.tablature.NextPattern()
+				newPattern := m.tablature.NextPattern()
+				// Also update the audio player
+				if m.player != nil {
+					m.player.SetFingerstylePattern(newPattern)
+				}
 			}
 		}
 

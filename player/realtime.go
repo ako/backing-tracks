@@ -43,6 +43,9 @@ type RealtimePlayer struct {
 	// Speed state
 	tempoOffset int // BPM offset from original tempo (e.g., +10 or -20)
 
+	// Fingerstyle pattern
+	fingerstylePattern midi.PatternType
+
 	// Control channels
 	stopChan chan struct{}
 	stopOnce sync.Once
@@ -722,6 +725,32 @@ func (p *RealtimePlayer) IsTrackMuted(track int) bool {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	return p.mutedTracks[track]
+}
+
+// SetFingerstylePattern changes the fingerstyle pattern and regenerates events
+func (p *RealtimePlayer) SetFingerstylePattern(pattern midi.PatternType) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	p.fingerstylePattern = pattern
+
+	// Stop any active fingerstyle notes
+	for key := range p.activeNotes {
+		if key.channel == 3 {
+			p.sendCommand(fmt.Sprintf("noteoff %d %d", key.channel, key.note))
+			delete(p.activeNotes, key)
+		}
+	}
+
+	// Regenerate playback data with new pattern
+	p.playbackData = midi.GeneratePlaybackDataWithPattern(p.track, pattern)
+}
+
+// GetFingerstylePattern returns the current fingerstyle pattern type
+func (p *RealtimePlayer) GetFingerstylePattern() midi.PatternType {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.fingerstylePattern
 }
 
 // allNotesOff sends note-off for all channels

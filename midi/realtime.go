@@ -32,6 +32,11 @@ type PlaybackData struct {
 
 // GeneratePlaybackData creates playback data from a track
 func GeneratePlaybackData(track *parser.Track) *PlaybackData {
+	return GeneratePlaybackDataWithPattern(track, "")
+}
+
+// GeneratePlaybackDataWithPattern creates playback data with a specific fingerstyle pattern
+func GeneratePlaybackDataWithPattern(track *parser.Track, fingerstylePattern PatternType) *PlaybackData {
 	ticksPerBar := uint32(1920) // 480 ticks per quarter * 4 quarters
 	ticksPerQuarter := uint32(480)
 
@@ -163,12 +168,12 @@ func GeneratePlaybackData(track *parser.Track) *PlaybackData {
 	}
 	tuning := theory.GetTuning(tuningName)
 	tabConfig := TablatureConfig{
+		PatternType: fingerstylePattern, // Use specified pattern, or default if empty
 		Tuning:      tuning,
 		Capo:        track.Info.Capo,
 		ShowFingers: true,
 		Complexity:  "moderate",
 	}
-	// Pattern type will be selected based on track style in GenerateTablature
 	tablature := GenerateTablature(track, tabConfig)
 	if tablature != nil {
 		ticksPerBeat := ticksPerBar / 4 // Assuming 4/4 time
