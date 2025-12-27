@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"backing-tracks/parser"
+	"backing-tracks/theory"
 )
 
 // PlaybackEvent represents a MIDI event with timing for real-time playback
@@ -24,8 +25,9 @@ type PlaybackData struct {
 	TotalTicks   uint32
 	TotalBars    int
 	Tempo        int
-	TickDuration time.Duration       // Duration of one tick
-	Sections     []parser.SectionInfo // Section boundaries
+	TickDuration time.Duration         // Duration of one tick
+	Sections     []parser.SectionInfo  // Section boundaries
+	Lyrics       []parser.LyricsBlock  // Lyrics for each section
 }
 
 // GeneratePlaybackData creates playback data from a track
@@ -154,10 +156,69 @@ func GeneratePlaybackData(track *parser.Track) *PlaybackData {
 		}
 	}
 
+	// Generate fingerstyle events from tablature
+	tuningName := track.Info.Tuning
+	if tuningName == "" {
+		tuningName = "standard"
+	}
+	tuning := theory.GetTuning(tuningName)
+	tabConfig := TablatureConfig{
+		Tuning:      tuning,
+		Capo:        track.Info.Capo,
+		ShowFingers: true,
+		Complexity:  "moderate",
+	}
+	// Pattern type will be selected based on track style in GenerateTablature
+	tablature := GenerateTablature(track, tabConfig)
+	if tablature != nil {
+		ticksPerBeat := ticksPerBar / 4 // Assuming 4/4 time
+		for _, bar := range tablature.Bars {
+			barStartTick := uint32((bar.BarNumber - 1)) * ticksPerBar
+			for _, note := range bar.Notes {
+				if note.MidiNote <= 0 {
+					continue
+				}
+				// Calculate tick position within bar
+				noteTick := barStartTick + uint32((note.Beat-1)*float64(ticksPerBeat))
+				// Note duration in ticks (default 0.5 beats if not specified)
+				duration := note.Duration
+				if duration <= 0 {
+					duration = 0.5
+				}
+				durationTicks := uint32(duration * float64(ticksPerBeat))
+
+				velocity := uint8(note.Velocity)
+				if velocity == 0 {
+					velocity = 80 // Default velocity
+				}
+
+				// Note on
+				events = append(events, PlaybackEvent{
+					Tick:     noteTick,
+					Channel:  3, // Fingerstyle channel
+					Note:     uint8(note.MidiNote),
+					Velocity: velocity,
+					IsNoteOn: true,
+				})
+				// Note off
+				events = append(events, PlaybackEvent{
+					Tick:     noteTick + durationTicks,
+					Channel:  3,
+					Note:     uint8(note.MidiNote),
+					Velocity: 0,
+					IsNoteOn: false,
+				})
+			}
+		}
+	}
+
 	// Sort by tick
 	sort.Slice(events, func(i, j int) bool {
 		return events[i].Tick < events[j].Tick
 	})
+
+	sections := track.Progression.GetSections()
+	lyrics := parser.BuildLyricsBlocks(track.Sections, sections)
 
 	return &PlaybackData{
 		Events:       events,
@@ -166,7 +227,8 @@ func GeneratePlaybackData(track *parser.Track) *PlaybackData {
 		TotalBars:    totalBars,
 		Tempo:        track.Info.Tempo,
 		TickDuration: tickDuration,
-		Sections:     track.Progression.GetSections(),
+		Sections:     sections,
+		Lyrics:       lyrics,
 	}
 }
 
@@ -179,6 +241,11 @@ func (p *PlaybackData) GetSectionAtBar(bar int) *parser.SectionInfo {
 		}
 	}
 	return nil
+}
+
+// GetLyricsAtBar returns the lyric line at the given bar position
+func (p *PlaybackData) GetLyricsAtBar(bar int) *parser.LyricLine {
+	return parser.GetLyricsAtBar(p.Lyrics, bar)
 }
 
 // GetEventsInRange returns events within a tick range

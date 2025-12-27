@@ -73,7 +73,7 @@ type PlayerController interface {
 	GetTranspose() int
 	SetCapo(fret int)
 	GetCapo() int
-	ToggleTrackMute(track int) // 0=drums, 1=bass, 2=chords, 3=melody
+	ToggleTrackMute(track int) // 0=drums, 1=bass, 2=chords, 3=melody, 4=fingerstyle
 	IsTrackMuted(track int) bool
 	ToggleLoop(length int)                                 // Toggle loop of N bars from current position
 	GetLoop() (enabled bool, startBar, endBar, length int) // Get loop state
@@ -273,6 +273,11 @@ func (m *TUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Toggle melody
 			if m.player != nil {
 				m.player.ToggleTrackMute(3)
+			}
+		case "5":
+			// Toggle fingerstyle
+			if m.player != nil {
+				m.player.ToggleTrackMute(4)
 			}
 		case "[":
 			// Move capo down (with audio transpose)
@@ -543,9 +548,9 @@ func (m *TUIModel) renderHeader() string {
 	// Show track mute status
 	muteIndicator := ""
 	if m.player != nil {
-		trackNames := []string{"Dr", "Ba", "Ch", "Me"}
+		trackNames := []string{"Dr", "Ba", "Ch", "Me", "Fi"}
 		var mutedTracks []string
-		for i := 0; i < 4; i++ {
+		for i := 0; i < 5; i++ {
 			if m.player.IsTrackMuted(i) {
 				mutedTracks = append(mutedTracks, trackNames[i])
 			}

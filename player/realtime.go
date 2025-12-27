@@ -32,7 +32,7 @@ type RealtimePlayer struct {
 	activeNotes     map[noteKey]bool // Track active notes for cleanup
 	transposeOffset int              // Semitones to transpose
 	capoPosition    int              // Capo fret position (0 = no capo)
-	mutedTracks     [4]bool          // 0=drums, 1=bass, 2=chords, 3=melody
+	mutedTracks     [5]bool          // 0=drums, 1=bass, 2=chords, 3=melody, 4=fingerstyle
 
 	// Loop state
 	loopEnabled  bool // Whether loop is active
@@ -190,6 +190,7 @@ func NewRealtimePlayer(track *parser.Track, soundFont string) (*RealtimePlayer, 
 	player.sendCommand(fmt.Sprintf("prog 0 %d", getGMProgram(chordsInstrument, 0)))  // Chords (default: piano)
 	player.sendCommand(fmt.Sprintf("prog 1 %d", getGMProgram(bassInstrument, 33)))   // Bass (default: fingered bass)
 	player.sendCommand(fmt.Sprintf("prog 2 %d", getGMProgram(melodyInstrument, 25))) // Melody (default: steel guitar)
+	player.sendCommand(fmt.Sprintf("prog 3 %d", 24))                                  // Fingerstyle (nylon guitar)
 
 	return player, nil
 }
@@ -271,7 +272,7 @@ func (p *RealtimePlayer) playbackLoop() {
 // playEvent sends a single event to FluidSynth
 func (p *RealtimePlayer) playEvent(evt midi.PlaybackEvent) {
 	// Check if track is muted
-	// Channel mapping: 9=drums(0), 1=bass(1), 0=chords(2), 2=melody(3)
+	// Channel mapping: 9=drums(0), 1=bass(1), 0=chords(2), 2=melody(3), 3=fingerstyle(4)
 	trackIdx := -1
 	switch evt.Channel {
 	case 9:
@@ -282,6 +283,8 @@ func (p *RealtimePlayer) playEvent(evt midi.PlaybackEvent) {
 		trackIdx = 2 // chords
 	case 2:
 		trackIdx = 3 // melody
+	case 3:
+		trackIdx = 4 // fingerstyle
 	}
 	if trackIdx >= 0 && p.mutedTracks[trackIdx] {
 		return // Skip muted track
@@ -554,6 +557,44 @@ func (p *RealtimePlayer) GetSections() []struct{ Name string; StartBar, EndBar i
 	return result
 }
 
+// GetCurrentLyrics returns the lyrics text and chord symbols at the current bar
+func (p *RealtimePlayer) GetCurrentLyrics() (text string, chords []string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	currentBar := p.getCurrentBar()
+	return p.getLyricsForBarLocked(currentBar)
+}
+
+// GetLyricsForBar returns the lyrics text and chord symbols for a specific bar
+func (p *RealtimePlayer) GetLyricsForBar(bar int) (text string, chords []string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	return p.getLyricsForBarLocked(bar)
+}
+
+// getLyricsForBarLocked returns lyrics for a bar (must be called with lock held)
+func (p *RealtimePlayer) getLyricsForBarLocked(bar int) (text string, chords []string) {
+	lyricLine := p.playbackData.GetLyricsAtBar(bar)
+	if lyricLine == nil {
+		return "", nil
+	}
+
+	chords = make([]string, len(lyricLine.ChordMarks))
+	for i, cm := range lyricLine.ChordMarks {
+		chords[i] = cm.Chord
+	}
+	return lyricLine.Text, chords
+}
+
+// HasLyrics returns true if the track has any lyrics
+func (p *RealtimePlayer) HasLyrics() bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return len(p.playbackData.Lyrics) > 0
+}
+
 // getSpeedAdjustedElapsed returns the elapsed playback time adjusted for tempo changes (must be called with lock held)
 func (p *RealtimePlayer) getSpeedAdjustedElapsed() time.Duration {
 	realElapsed := time.Since(p.startTime) - p.pausedTotal + p.seekOffset
@@ -637,9 +678,9 @@ func (p *RealtimePlayer) GetCapo() int {
 	return p.capoPosition
 }
 
-// ToggleTrackMute toggles mute state for a track (0=drums, 1=bass, 2=chords, 3=melody)
+// ToggleTrackMute toggles mute state for a track (0=drums, 1=bass, 2=chords, 3=melody, 4=fingerstyle)
 func (p *RealtimePlayer) ToggleTrackMute(track int) {
-	if track < 0 || track > 3 {
+	if track < 0 || track > 4 {
 		return
 	}
 	p.mu.Lock()
@@ -660,6 +701,8 @@ func (p *RealtimePlayer) ToggleTrackMute(track int) {
 			channel = 0 // chords
 		case 3:
 			channel = 2 // melody
+		case 4:
+			channel = 3 // fingerstyle
 		}
 		// Stop notes on this channel
 		for key := range p.activeNotes {
@@ -671,9 +714,9 @@ func (p *RealtimePlayer) ToggleTrackMute(track int) {
 	}
 }
 
-// IsTrackMuted returns whether a track is muted (0=drums, 1=bass, 2=chords, 3=melody)
+// IsTrackMuted returns whether a track is muted (0=drums, 1=bass, 2=chords, 3=melody, 4=fingerstyle)
 func (p *RealtimePlayer) IsTrackMuted(track int) bool {
-	if track < 0 || track > 3 {
+	if track < 0 || track > 4 {
 		return false
 	}
 	p.mu.Lock()
