@@ -451,21 +451,40 @@ var GuitarVoicings = map[string]GuitarVoicing{
 	},
 }
 
+// isStandardTuning checks if the given tuning is standard guitar tuning
+func isStandardTuning(tuning theory.Tuning) bool {
+	standard := theory.Tunings["standard"]
+	if len(tuning.Notes) != len(standard.Notes) {
+		return false
+	}
+	for i, note := range tuning.Notes {
+		if note != standard.Notes[i] {
+			return false
+		}
+	}
+	return true
+}
+
 // GetGuitarVoicing returns the guitar voicing for a chord symbol
-// Uses the predefined voicing if available, otherwise generates one dynamically
+// Uses the predefined voicing if available (for standard tuning),
+// otherwise generates one dynamically based on the tuning
 func GetGuitarVoicing(symbol string, tuning theory.Tuning) GuitarVoicing {
-	// First try exact match in predefined voicings
-	if voicing, ok := GuitarVoicings[symbol]; ok {
-		return voicing
+	// Only use predefined voicings for standard tuning
+	if isStandardTuning(tuning) {
+		// First try exact match in predefined voicings
+		if voicing, ok := GuitarVoicings[symbol]; ok {
+			return voicing
+		}
+
+		// Normalize and try again
+		normalized := normalizeChordSymbol(symbol)
+		if voicing, ok := GuitarVoicings[normalized]; ok {
+			return voicing
+		}
 	}
 
-	// Normalize and try again
-	normalized := normalizeChordSymbol(symbol)
-	if voicing, ok := GuitarVoicings[normalized]; ok {
-		return voicing
-	}
-
-	// Use theory package's dynamic generation and convert to GuitarVoicing
+	// Use theory package's dynamic generation for non-standard tunings
+	// or when chord is not in predefined voicings
 	theoryVoicing := theory.GenerateChordVoicing(symbol, tuning)
 	return convertTheoryVoicing(symbol, theoryVoicing)
 }

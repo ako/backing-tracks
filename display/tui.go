@@ -281,6 +281,7 @@ func (m *TUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if m.player != nil {
 					m.player.SetCapo(m.capoPosition)
 				}
+				m.updateTablatureConfig()
 			}
 		case "]":
 			// Move capo up (with audio transpose)
@@ -289,16 +290,19 @@ func (m *TUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if m.player != nil {
 					m.player.SetCapo(m.capoPosition)
 				}
+				m.updateTablatureConfig()
 			}
 		case "{":
 			// Move capo down (visual only, no audio transpose)
 			if m.capoPosition > 0 {
 				m.capoPosition--
+				m.updateTablatureConfig()
 			}
 		case "}":
 			// Move capo up (visual only, no audio transpose)
 			if m.capoPosition < 12 {
 				m.capoPosition++
+				m.updateTablatureConfig()
 			}
 		case ",", "<":
 			// Previous tuning
@@ -1128,6 +1132,14 @@ func (m *TUIModel) getCapoAdjustedTuning() theory.Tuning {
 	return adjusted
 }
 
+// updateTablatureConfig updates the tablature with current tuning and capo settings
+func (m *TUIModel) updateTablatureConfig() {
+	if m.tablature != nil {
+		m.tablature.UpdateConfig(m.tuning, m.capoPosition)
+		m.tablature.RegenerateTablature(m.track)
+	}
+}
+
 // cycleTuning changes the tuning by the given offset (-1 for previous, +1 for next)
 func (m *TUIModel) cycleTuning(offset int) {
 	numTunings := len(theory.TuningNames)
@@ -1139,6 +1151,9 @@ func (m *TUIModel) cycleTuning(offset int) {
 	if m.fretboard != nil {
 		m.fretboard.SetTuning(m.tuning)
 	}
+
+	// Update tablature display with new tuning
+	m.updateTablatureConfig()
 }
 
 // renderRightColumn renders the chord charts and picking pattern

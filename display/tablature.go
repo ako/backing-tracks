@@ -191,7 +191,15 @@ func (td *TablatureDisplay) Render() string {
 	b.WriteString("\n")
 
 	// Render each string (high e to low E)
-	stringNames := []string{"e", "B", "G", "D", "A", "E"}
+	// Get string names from tuning config (stored low to high, display high to low)
+	stringNames := []string{"e", "B", "G", "D", "A", "E"} // default
+	if len(td.config.Tuning.Names) >= 6 {
+		// Reverse the tuning names for display (low-to-high becomes high-to-low)
+		stringNames = make([]string, 6)
+		for i := 0; i < 6; i++ {
+			stringNames[i] = td.config.Tuning.Names[5-i]
+		}
+	}
 
 	for stringIdx := 0; stringIdx < 6; stringIdx++ {
 		currentLine := td.renderStringLine(current, stringIdx, barWidth)
