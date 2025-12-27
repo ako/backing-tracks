@@ -81,6 +81,9 @@ type PlayerController interface {
 	GetTempo() (effectiveBPM int, offset int)              // Get current effective tempo and offset
 	GetCurrentSection() (name string, startBar, endBar int) // Get current section info
 	LoopCurrentSection()                                    // Toggle loop for current section
+	GetCurrentLyrics() (text string, chords []string)       // Get lyrics at current position
+	GetLyricsForBar(bar int) (text string, chords []string) // Get lyrics for specific bar
+	HasLyrics() bool                                        // Check if track has any lyrics
 }
 
 // TUIModel is the Bubbletea model for live display
@@ -98,6 +101,7 @@ type TUIModel struct {
 	// Display components
 	fretboard    *FretboardDisplay
 	chordChart   *ChordChart
+	tablature    *TablatureDisplay
 	currentScale *theory.Scale
 	tuning       theory.Tuning
 	tuningIndex  int    // Index into theory.TuningNames
@@ -115,6 +119,7 @@ type TUIModel struct {
 	seekOffset      time.Duration // For seeking forward/backward
 	transposeOffset int           // Semitones to transpose (+/-)
 	capoPosition    int           // Capo fret position (0 = no capo)
+	lyricsEnabled   bool          // Show lyrics display
 	quitting        bool
 
 	// Audio player (optional - for synced playback)
@@ -137,23 +142,35 @@ func NewTUIModel(track *parser.Track) *TUIModel {
 	fretboard := NewFretboardDisplayWithTuning(scale, 15, tuning)
 	fretboard.SetCompactMode(true)
 	chordChart := NewChordChart()
+	tablature := NewTablatureDisplay(track, tuning, track.Info.Capo)
+
+	// Check if track has lyrics (in sections or per-bar)
+	hasLyrics := len(track.Lyrics) > 0
+	for _, section := range track.Sections {
+		if section.Lyrics != "" {
+			hasLyrics = true
+			break
+		}
+	}
 
 	return &TUIModel{
-		track:        track,
-		bars:         bars,
-		chords:       track.Progression.GetChords(),
-		tempo:        track.Info.Tempo,
-		timePerBeat:  timePerBeat,
-		fretboard:    fretboard,
-		chordChart:   chordChart,
-		currentScale: scale,
-		tuning:       tuning,
-		tuningIndex:  tuningIndex,
-		tuningName:   tuningName,
-		capoPosition: track.Info.Capo, // Initialize from track
-		playing:      true,
-		width:        120,
-		height:       30,
+		track:         track,
+		bars:          bars,
+		chords:        track.Progression.GetChords(),
+		tempo:         track.Info.Tempo,
+		timePerBeat:   timePerBeat,
+		fretboard:     fretboard,
+		chordChart:    chordChart,
+		tablature:     tablature,
+		currentScale:  scale,
+		tuning:        tuning,
+		tuningIndex:   tuningIndex,
+		tuningName:    tuningName,
+		capoPosition:  track.Info.Capo, // Initialize from track
+		lyricsEnabled: hasLyrics,       // Enable by default if track has lyrics
+		playing:       true,
+		width:         120,
+		height:        30,
 	}
 }
 
@@ -349,6 +366,26 @@ func (m *TUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.player != nil {
 				m.player.LoopCurrentSection()
 			}
+		case "l":
+			// Toggle lyrics display
+			if m.player != nil && m.player.HasLyrics() {
+				m.lyricsEnabled = !m.lyricsEnabled
+			}
+		case "t":
+			// Toggle tablature display
+			if m.tablature != nil {
+				m.tablature.Toggle()
+			}
+		case ";":
+			// Previous pattern type
+			if m.tablature != nil {
+				m.tablature.PrevPattern()
+			}
+		case "'":
+			// Next pattern type
+			if m.tablature != nil {
+				m.tablature.NextPattern()
+			}
 		}
 
 	case tea.WindowSizeMsg:
@@ -374,6 +411,10 @@ func (m *TUIModel) updatePosition() {
 	// If we have a player, sync from it
 	if m.player != nil {
 		m.currentBar, m.currentBeat, m.currentStrum, m.paused = m.player.GetPlaybackState()
+		// Update tablature position
+		if m.tablature != nil {
+			m.tablature.SetPosition(m.currentBar, float64(m.currentBeat)+1)
+		}
 		return
 	}
 
@@ -396,6 +437,11 @@ func (m *TUIModel) updatePosition() {
 	timePerStrum := m.timePerBeat * 4 / time.Duration(strumsPerBar)
 	totalStrums := int(elapsed / timePerStrum)
 	m.currentStrum = totalStrums % strumsPerBar
+
+	// Update tablature position
+	if m.tablature != nil {
+		m.tablature.SetPosition(m.currentBar, float64(m.currentBeat)+1)
+	}
 }
 
 // View renders the TUI
@@ -424,6 +470,13 @@ func (m *TUIModel) View() string {
 	)
 	b.WriteString(row)
 	b.WriteString("\n\n")
+
+	// Tablature display (if enabled)
+	if m.tablature != nil && m.tablature.IsEnabled() {
+		m.tablature.SetWidth(m.width)
+		b.WriteString(m.tablature.Render())
+		b.WriteString("\n\n")
+	}
 
 	// Progress bar
 	b.WriteString(m.renderProgressBar())
@@ -590,23 +643,38 @@ func (m *TUIModel) renderBarRow(startBar int) string {
 	}
 	lines = append(lines, chordLine)
 
-	// Line 2: Lyrics
-	lyricsLine := "  "
-	for i := 0; i < 2; i++ {
-		barIdx := startBar + i
-		if barIdx < len(m.bars) {
-			lyrics := m.bars[barIdx].Lyrics
-			if len(lyrics) > barWidth-2 {
-				lyrics = lyrics[:barWidth-2]
+	// Line 2: Lyrics (only if enabled and available)
+	if m.lyricsEnabled {
+		lyricsLine := "  "
+		hasAnyLyrics := false
+		for i := 0; i < 2; i++ {
+			barIdx := startBar + i
+			if barIdx < len(m.bars) {
+				// Get lyrics from player if available, otherwise from bar
+				lyrics := ""
+				if m.player != nil {
+					lyrics, _ = m.player.GetLyricsForBar(barIdx)
+				}
+				if lyrics == "" {
+					lyrics = m.bars[barIdx].Lyrics
+				}
+				if lyrics != "" {
+					hasAnyLyrics = true
+				}
+				if len(lyrics) > barWidth-2 {
+					lyrics = lyrics[:barWidth-2]
+				}
+				style := lyricsStyle.Width(barWidth)
+				if barIdx == m.currentBar && lyrics != "" {
+					style = style.Bold(true)
+				}
+				lyricsLine += style.Render(lyrics)
 			}
-			style := lyricsStyle.Width(barWidth)
-			if barIdx == m.currentBar && lyrics != "" {
-				style = style.Bold(true)
-			}
-			lyricsLine += style.Render(lyrics)
+		}
+		if hasAnyLyrics {
+			lines = append(lines, lyricsLine)
 		}
 	}
-	lines = append(lines, lyricsLine)
 
 	// Line 3: Strum pattern
 	strumLine := "  "
@@ -1090,14 +1158,29 @@ func (m *TUIModel) renderRightColumn() string {
 	uniqueChords := m.getUniqueChords()
 	var allDiagrams [][]string
 
+	// Get current chord for highlighting (strip slash bass note for comparison)
+	currentChord := m.getCurrentChordSymbol()
+	if idx := strings.Index(currentChord, "/"); idx > 0 {
+		currentChord = currentChord[:idx]
+	}
+
 	for _, chord := range uniqueChords {
+		// First apply transpose to get the actual chord being played
+		transposedChord := chord
+		if m.transposeOffset != 0 {
+			transposedChord = transposeChord(chord, m.transposeOffset)
+		}
+
+		// Check if this is the active chord
+		isActive := (chord == currentChord)
+
 		// If capo is set, transpose chord DOWN to get the shape to play
 		// e.g., G chord with capo 2 = play F shape (F + capo 2 = G sound)
-		displayChord := chord
-		shapeChord := chord
+		displayChord := transposedChord
+		shapeChord := transposedChord
 		if m.capoPosition > 0 {
-			shapeChord = transposeChord(chord, -m.capoPosition)
-			displayChord = fmt.Sprintf("%s→%s", chord, shapeChord)
+			shapeChord = transposeChord(transposedChord, -m.capoPosition)
+			displayChord = fmt.Sprintf("%s→%s", transposedChord, shapeChord)
 		}
 
 		voicings := m.chordChart.GetVoicingsForTuning(shapeChord, m.tuningName)
@@ -1107,7 +1190,7 @@ func (m *TUIModel) renderRightColumn() string {
 		// Override the name to show both original and shape
 		voicing := voicings[0]
 		voicing.Name = displayChord
-		allDiagrams = append(allDiagrams, m.renderChordDiagram(voicing))
+		allDiagrams = append(allDiagrams, m.renderChordDiagram(voicing, isActive))
 	}
 
 	// Arrange 4 per row
@@ -1208,6 +1291,26 @@ func (m *TUIModel) getPickingPattern() []string {
 			"A|----0-------0---|",
 			"E|0-------0-------|",
 		}
+	case "arpeggio_up":
+		// p-i-m-a: Bass, G, B, e, Bass, G, B, e (ascending treble)
+		return []string{
+			"e|------0-------0-|",
+			"B|----0-------0---|",
+			"G|--0-------0-----|",
+			"D|----------------|",
+			"A|----------------|",
+			"E|0-------0-------|",
+		}
+	case "arpeggio_down":
+		// p-a-m-i: Bass, e, B, G, Bass, e, B, G (descending treble)
+		return []string{
+			"e|--0-------0-----|",
+			"B|----0-------0---|",
+			"G|------0-------0-|",
+			"D|----------------|",
+			"A|----------------|",
+			"E|0-------0-------|",
+		}
 	default:
 		return []string{}
 	}
@@ -1233,7 +1336,7 @@ func (m *TUIModel) getUniqueChords() []string {
 }
 
 // renderChordDiagram renders a single chord diagram
-func (m *TUIModel) renderChordDiagram(v ChordVoicing) []string {
+func (m *TUIModel) renderChordDiagram(v ChordVoicing, isActive bool) []string {
 	var lines []string
 
 	// Chord name and tab notation
@@ -1245,7 +1348,13 @@ func (m *TUIModel) renderChordDiagram(v ChordVoicing) []string {
 			tabStr += fmt.Sprintf("%d", v.Frets[i])
 		}
 	}
-	lines = append(lines, lipgloss.NewStyle().Bold(true).Render(fmt.Sprintf(" %s [%s]", v.Name, tabStr)))
+
+	// Highlight active chord with color
+	nameStyle := lipgloss.NewStyle().Bold(true)
+	if isActive {
+		nameStyle = nameStyle.Foreground(lipgloss.Color("212")).Background(lipgloss.Color("236"))
+	}
+	lines = append(lines, nameStyle.Render(fmt.Sprintf(" %s [%s] ", v.Name, tabStr)))
 
 	// Determine fret range
 	startFret := 1
@@ -1306,7 +1415,7 @@ func (m *TUIModel) renderProgressBar() string {
 	filled := int(progress * float64(width))
 	bar := strings.Repeat("▓", filled) + strings.Repeat("░", width-filled)
 
-	controls := headerStyle.Render("  [space] pause  [←/→] seek  [↑/↓] transpose  [Shift+↑/↓] tempo  [[/]] capo  [Shift+1-9] loop  [Shift+0] section loop  [q] quit")
+	controls := headerStyle.Render("  [space] pause  [←/→] seek  [↑/↓] transpose  [Shift+↑/↓] tempo  [[/]] capo  [{/}] visual capo  [</>] tuning  [l] lyrics  [t] tab  [q] quit")
 
 	return fmt.Sprintf("  %s  %d%% (bar %d/%d)%s",
 		progressStyle.Render(bar),
