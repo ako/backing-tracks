@@ -392,6 +392,7 @@ func (m *TUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Previous pattern type
 			if m.tablature != nil {
 				newPattern := m.tablature.PrevPattern()
+				m.tablature.RegenerateTablature(m.track)
 				// Also update the audio player
 				if m.player != nil {
 					m.player.SetFingerstylePattern(newPattern)
@@ -401,6 +402,7 @@ func (m *TUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Next pattern type
 			if m.tablature != nil {
 				newPattern := m.tablature.NextPattern()
+				m.tablature.RegenerateTablature(m.track)
 				// Also update the audio player
 				if m.player != nil {
 					m.player.SetFingerstylePattern(newPattern)
