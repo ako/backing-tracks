@@ -27,6 +27,7 @@ type Track struct {
 type Section struct {
 	Name        string           `yaml:"name"`
 	Progression ChordProgression `yaml:"chord_progression"`
+	Lyrics      string           `yaml:"lyrics,omitempty"` // Chord-over-lyrics format
 }
 
 // TrackInfo contains metadata about the track
@@ -131,6 +132,8 @@ func (t *Track) expandSections() {
 		if !ok {
 			continue // Skip unknown sections
 		}
+		// Add section marker so GetChords() can track section boundaries
+		allChords = append(allChords, "["+sectionName+"]")
 		// Get chords from this section (without repeat applied)
 		chords := section.Progression.GetChords()
 		for _, chord := range chords {

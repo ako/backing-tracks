@@ -237,6 +237,122 @@ form:
   - outro
 ```
 
+### Lyrics in Sections
+
+Add lyrics to sections using the chord-over-lyrics format. Chords are placed on a separate line above the lyrics, positioned where they should be played:
+
+```yaml
+sections:
+  - name: verse
+    chord_progression:
+      pattern: "C G Am F"
+      bars_per_chord: 1
+    lyrics: |
+      C              G
+      Here are some words to sing along
+      Am             F
+      This is where the melody goes
+
+  - name: chorus
+    chord_progression:
+      pattern: "F G C Am"
+      bars_per_chord: 1
+    lyrics: |
+      F              G
+      Sing it loud, sing it proud
+      C              Am
+      Let the music flow
+```
+
+#### How Lyrics Work
+
+1. **Chord lines**: Lines starting with a chord symbol (C, Am, G7, etc.) are treated as chord markers
+2. **Lyric lines**: Lines following chord lines are the lyrics to display
+3. **Chord positions**: The horizontal position of chords indicates timing relative to the lyrics
+4. **Display**: Press `l` during playback to toggle lyrics display
+5. **Auto-enabled**: If a track has lyrics, they're shown by default
+
+### Beat-Mapped Lyrics (Beatles-style)
+
+For precise beat-level synchronization, use the beat notation format where each token represents one beat:
+
+```yaml
+sections:
+  - name: verse
+    chord_progression:
+      pattern: "C C G G"
+      bars_per_chord: 1
+    lyrics: |
+      C    /    /    /    C    /    /    /
+      Walking down the   road today,     yeah
+      G    /    /    /    G    /    /    /
+      Singing songs a-   long the way
+```
+
+#### Beat Notation
+
+| Token | Meaning |
+|-------|---------|
+| `C`, `Am`, `G7` | Chord plays on this beat |
+| `/` | Continue previous chord (beat marker) |
+
+#### How It Works
+
+1. Each token (chord or `/`) represents one beat in 4/4 time
+2. 8 tokens = 2 bars (4 beats per bar)
+3. Lyrics are positioned under the beats where they should be sung
+4. Character positions in the lyrics line align with beat positions above
+
+#### Example: Precise Timing
+
+```yaml
+lyrics: |
+  Am   /    /    /    Am   /    /    /
+  She  takes you  down to   her  place near the
+  F#m  /    /    /    F#m  /    /    /
+  ri - ver, you  can  hear the boats go  by
+```
+
+This format gives you beat-level control over when lyrics appear, making it ideal for songs where precise timing matters.
+
+#### Example: Full Song with Lyrics
+
+```yaml
+track:
+  title: "Simple Song"
+  key: C
+  tempo: 100
+  style: folk
+
+sections:
+  - name: verse
+    chord_progression:
+      pattern: "C G Am F"
+    lyrics: |
+      C              G
+      Walking down the road today
+      Am             F
+      Singing songs along the way
+
+  - name: chorus
+    chord_progression:
+      pattern: "F G C C"
+    lyrics: |
+      F              G
+      This is the chorus now
+      C
+      We all sing together
+
+form:
+  - verse
+  - chorus
+  - verse
+  - chorus
+
+rhythm:
+  style: fingerpick
+```
+
 ---
 
 ## Rhythm Section

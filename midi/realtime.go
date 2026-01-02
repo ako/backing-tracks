@@ -27,7 +27,9 @@ type PlaybackData struct {
 	Tempo        int
 	TickDuration time.Duration         // Duration of one tick
 	Sections     []parser.SectionInfo  // Section boundaries
-	Lyrics       []parser.LyricsBlock  // Lyrics for each section
+	Lyrics       []parser.LyricsBlock  // Lyrics for each section (legacy)
+	BeatLyrics   []parser.LyricsData   // Beat-mapped lyrics (new format)
+	BeatsPerBar  int                   // Beats per bar (typically 4)
 }
 
 // GeneratePlaybackData creates playback data from a track
@@ -225,6 +227,10 @@ func GeneratePlaybackDataWithPattern(track *parser.Track, fingerstylePattern Pat
 	sections := track.Progression.GetSections()
 	lyrics := parser.BuildLyricsBlocks(track.Sections, sections)
 
+	// Build beat-mapped lyrics (new format)
+	beatsPerBar := 4 // Default for 4/4 time
+	beatLyrics := parser.BuildLyricsData(track.Sections, sections, beatsPerBar)
+
 	return &PlaybackData{
 		Events:       events,
 		TicksPerBar:  ticksPerBar,
@@ -234,6 +240,8 @@ func GeneratePlaybackDataWithPattern(track *parser.Track, fingerstylePattern Pat
 		TickDuration: tickDuration,
 		Sections:     sections,
 		Lyrics:       lyrics,
+		BeatLyrics:   beatLyrics,
+		BeatsPerBar:  beatsPerBar,
 	}
 }
 
@@ -248,9 +256,32 @@ func (p *PlaybackData) GetSectionAtBar(bar int) *parser.SectionInfo {
 	return nil
 }
 
-// GetLyricsAtBar returns the lyric line at the given bar position
+// GetLyricsAtBar returns the lyric line at the given bar position (legacy)
 func (p *PlaybackData) GetLyricsAtBar(bar int) *parser.LyricLine {
 	return parser.GetLyricsAtBar(p.Lyrics, bar)
+}
+
+// GetBeatLyricsAt returns lyrics at a specific bar and beat position
+func (p *PlaybackData) GetBeatLyricsAt(bar, beat int) *parser.BeatLyric {
+	return parser.GetBeatLyricsAt(p.BeatLyrics, bar, beat)
+}
+
+// GetBeatLyricsForBar returns all lyrics for a specific bar
+func (p *PlaybackData) GetBeatLyricsForBar(bar int) []parser.BeatLyric {
+	var result []parser.BeatLyric
+	for _, ld := range p.BeatLyrics {
+		for _, bl := range ld.BeatLyrics {
+			if bl.Bar == bar {
+				result = append(result, bl)
+			}
+		}
+	}
+	return result
+}
+
+// HasBeatLyrics returns true if beat-mapped lyrics are available
+func (p *PlaybackData) HasBeatLyrics() bool {
+	return len(p.BeatLyrics) > 0
 }
 
 // GetEventsInRange returns events within a tick range

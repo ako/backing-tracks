@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 	"time"
 
@@ -579,6 +580,26 @@ func (p *RealtimePlayer) GetLyricsForBar(bar int) (text string, chords []string)
 
 // getLyricsForBarLocked returns lyrics for a bar (must be called with lock held)
 func (p *RealtimePlayer) getLyricsForBarLocked(bar int) (text string, chords []string) {
+	// Try new beat-based format first
+	if p.playbackData.HasBeatLyrics() {
+		beatLyrics := p.playbackData.GetBeatLyricsForBar(bar)
+		if len(beatLyrics) > 0 {
+			// Combine all beat lyrics for the bar
+			var texts []string
+			var chordList []string
+			for _, bl := range beatLyrics {
+				if bl.Lyrics != "" {
+					texts = append(texts, bl.Lyrics)
+				}
+				if bl.Chord != "" {
+					chordList = append(chordList, bl.Chord)
+				}
+			}
+			return strings.Join(texts, " "), chordList
+		}
+	}
+
+	// Fall back to legacy format
 	lyricLine := p.playbackData.GetLyricsAtBar(bar)
 	if lyricLine == nil {
 		return "", nil
@@ -591,11 +612,47 @@ func (p *RealtimePlayer) getLyricsForBarLocked(bar int) (text string, chords []s
 	return lyricLine.Text, chords
 }
 
+// GetBeatLyrics returns lyrics at a specific bar and beat
+func (p *RealtimePlayer) GetBeatLyrics(bar, beat int) (lyrics string, chord string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	bl := p.playbackData.GetBeatLyricsAt(bar, beat)
+	if bl == nil {
+		return "", ""
+	}
+	return bl.Lyrics, bl.Chord
+}
+
+// GetBeatLyricsForBar returns all beat lyrics for a bar
+func (p *RealtimePlayer) GetBeatLyricsForBar(bar int) []struct {
+	Beat   int
+	Lyrics string
+	Chord  string
+} {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	beatLyrics := p.playbackData.GetBeatLyricsForBar(bar)
+	result := make([]struct {
+		Beat   int
+		Lyrics string
+		Chord  string
+	}, len(beatLyrics))
+
+	for i, bl := range beatLyrics {
+		result[i].Beat = bl.Beat
+		result[i].Lyrics = bl.Lyrics
+		result[i].Chord = bl.Chord
+	}
+	return result
+}
+
 // HasLyrics returns true if the track has any lyrics
 func (p *RealtimePlayer) HasLyrics() bool {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	return len(p.playbackData.Lyrics) > 0
+	return len(p.playbackData.Lyrics) > 0 || p.playbackData.HasBeatLyrics()
 }
 
 // getSpeedAdjustedElapsed returns the elapsed playback time adjusted for tempo changes (must be called with lock held)

@@ -53,12 +53,15 @@ Common chord symbol formats:
 
 ### BTML Output Format
 
+**CRITICAL: The `pattern` field must be a STRING of chord symbols, NOT a list of objects!**
+
 **Simple songs** (use chord_progression):
 ```yaml
 track:
   title: "Song Title"
   key: C
   tempo: 120
+  time_signature: 4/4
   style: rock
 
 chord_progression:
@@ -83,20 +86,24 @@ track:
   title: "Song Title"
   key: C
   tempo: 120
+  time_signature: 4/4
   style: pop
 
 sections:
   - name: verse
     chord_progression:
       pattern: "C G Am F"
+      bars_per_chord: 1
 
   - name: chorus
     chord_progression:
       pattern: "F G C Am"
+      bars_per_chord: 1
 
   - name: bridge
     chord_progression:
       pattern: "Dm Em F G"
+      bars_per_chord: 2
 
 form:
   - verse
@@ -118,7 +125,121 @@ drums:
   intensity: 0.7
 ```
 
+**For different chord durations within a section**, use the `*` notation:
+```yaml
+# Half-bar chords use *0.5, two-bar chords use *2
+pattern: "C*2 G Am*0.5 F*0.5 G"
+bars_per_chord: 1  # This is the DEFAULT, *notation overrides it
+```
+
+**For long patterns**, use a YAML list of strings (they get concatenated):
+```yaml
+chord_progression:
+  pattern:
+    - "C Am F G"
+    - "C*0.5 E*0.5 Am F G"
+    - "Dm G C C"
+  bars_per_chord: 1
+```
+
 Use **sections + form** when the sheet music has clear verse/chorus/bridge structure. Use **chord_progression** for simpler songs or when structure is unclear.
+
+### Adding Lyrics to Sections
+
+If the sheet music includes lyrics, add them using the chord-over-lyrics format:
+
+```yaml
+sections:
+  - name: verse
+    chord_progression:
+      pattern: "C G Am F"
+      bars_per_chord: 1
+    lyrics: |
+      C              G
+      Here are some words to sing
+      Am             F
+      This is where the melody goes
+
+  - name: chorus
+    chord_progression:
+      pattern: "F G C Am"
+    lyrics: |
+      F              G
+      Sing it loud and clear
+      C              Am
+      Everyone can hear
+```
+
+**Lyrics format rules:**
+1. Use YAML multiline string (`lyrics: |`)
+2. Chord lines: Place chord symbols (C, Am, G7) above lyrics where they should be played
+3. Lyric lines: The actual words to display below the chords
+4. Position chords horizontally to indicate timing relative to lyrics
+5. Empty lines between chord/lyric pairs for readability
+
+**Example with lyrics extracted from sheet music:**
+
+If you see sheet music with:
+- Verse: "Amazing grace, how sweet the sound"
+- Chords: G on "A-", C on "grace", G on "sweet", D on "sound"
+
+Output:
+```yaml
+sections:
+  - name: verse
+    chord_progression:
+      pattern: "G C G D"
+      bars_per_chord: 1
+    lyrics: |
+      G        C      G        D
+      Amazing grace, how sweet the sound
+```
+
+### COMMON MISTAKES TO AVOID
+
+**WRONG - Do NOT use this format:**
+```yaml
+# INVALID! This will cause parsing errors!
+chord_progression:
+  - chord: G
+    beats: 8
+  - chord: Em
+    beats: 4
+```
+
+**CORRECT - Use this format instead:**
+```yaml
+# VALID - pattern is a string of chord symbols
+chord_progression:
+  pattern: "G*2 Em"
+  bars_per_chord: 1
+```
+
+**WRONG - Missing required fields:**
+```yaml
+# INVALID! Missing pattern field
+sections:
+  - name: verse
+    bars: 8
+    chord_progression:
+      - chord: G
+```
+
+**CORRECT - Proper section format:**
+```yaml
+# VALID - each section needs chord_progression.pattern
+sections:
+  - name: verse
+    chord_progression:
+      pattern: "G G Em Em"
+      bars_per_chord: 1
+```
+
+**Unsupported fields** (do NOT use these):
+- `composer:` - not supported
+- `bars:` in sections - not supported
+- `beats:` - not supported (use `bars_per_chord` or `*` notation)
+- `chord:` as list items - not supported
 
 ### Style Inference Guidelines
 

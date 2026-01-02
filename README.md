@@ -145,6 +145,7 @@ During playback, you'll see:
 | `<` / `>` | Cycle through guitar tunings |
 | `Shift+1-9` | Loop current bar + next N-1 bars (press again to disable) |
 | `Shift+0` | Loop current section (press again to disable) |
+| `l` | Toggle lyrics display |
 | `1` | Toggle drums mute |
 | `2` | Toggle bass mute |
 | `3` | Toggle chords mute |
@@ -226,6 +227,20 @@ form:
   - verse
   - chorus
 ```
+
+**Lyrics in Sections** (chord-over-lyrics format):
+```yaml
+sections:
+  - name: verse
+    chord_progression:
+      pattern: "C G Am F"
+    lyrics: |
+      C              G
+      Here are some words to sing
+      Am             F
+      This is the melody
+```
+Lyrics are displayed during playback when enabled (press `l` to toggle).
 
 **Inline Section Markers** (simpler alternative):
 ```yaml
@@ -500,6 +515,7 @@ Contributions welcome! See:
 ## What's New
 
 **v0.6 (Current)**
+- ✅ **Lyrics support**: Add chord-over-lyrics in sections, display during playback (`l` to toggle)
 - ✅ **Real-time playback controls**: Pause/resume (space), seek (←/→)
 - ✅ **Transpose controls**: Shift song up/down by semitones (↑/↓)
 - ✅ **Capo support**: Set capo in BTML file or adjust live with [/] keys

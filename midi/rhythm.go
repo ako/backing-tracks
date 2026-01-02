@@ -901,10 +901,13 @@ func funkRhythm(notes ChordVoicing, startTick, duration, ticksPerBar uint32, mut
 	return events
 }
 
-// arpeggioPattern generates ascending or descending arpeggios
+// arpeggioPattern generates classical p-i-m-a / p-a-m-i style arpeggios
+// Pattern: Bass note on beat, then 3 treble notes (ascending or descending)
+// Creates the classic "1-2-3, 1-2-3, 1-2" Spanish Romance feel
 func arpeggioPattern(notes ChordVoicing, startTick, duration, ticksPerBar uint32, descending bool) []midiEvent {
 	events := []midiEvent{}
 	quarterNote := ticksPerBar / 4
+	eighthNote := quarterNote / 2
 	numBeats := int(duration / quarterNote)
 	if numBeats == 0 {
 		numBeats = 1
@@ -915,31 +918,51 @@ func arpeggioPattern(notes ChordVoicing, startTick, duration, ticksPerBar uint32
 		return events
 	}
 
-	// Time per note within a beat
-	noteSpacing := quarterNote / uint32(noteCount)
+	// Get bass note (lowest) and treble notes (rest)
+	bassNote := notes[0]
+	trebleNotes := notes[1:]
+	if len(trebleNotes) == 0 {
+		trebleNotes = notes // Fallback if only one note
+	}
 
+	// Order treble notes for ascending or descending
+	if descending {
+		// Reverse treble notes for descending (high to low): e, B, G
+		reversed := make([]uint8, len(trebleNotes))
+		for i, n := range trebleNotes {
+			reversed[len(trebleNotes)-1-i] = n
+		}
+		trebleNotes = reversed
+	}
+
+	// Build pattern: Bass, treble1, treble2, treble3, Bass, treble1, treble2, treble3
+	// This creates 8 eighth notes per bar with the classic arpeggio feel
 	for beat := 0; beat < numBeats; beat++ {
 		beatStart := startTick + uint32(beat)*quarterNote
-		vel := uint8(70)
-		if beat%4 == 0 {
-			vel = 80 // Accent beat 1
-		}
 
-		for i := 0; i < noteCount; i++ {
-			noteIdx := i
-			if descending {
-				noteIdx = noteCount - 1 - i
+		for i := 0; i < 2; i++ {
+			tick := beatStart + uint32(i)*eighthNote
+			noteDuration := eighthNote - 10
+
+			var note uint8
+			var vel uint8
+
+			// Pattern position within the 4-note cycle (bass + 3 treble)
+			patternPos := (beat*2 + i) % 4
+
+			if patternPos == 0 {
+				// Bass note on the "1" of each group
+				note = bassNote
+				vel = 80 // Accent bass
+			} else {
+				// Treble notes for positions 1, 2, 3
+				trebleIdx := (patternPos - 1) % len(trebleNotes)
+				note = trebleNotes[trebleIdx]
+				vel = 65 // Softer treble
 			}
 
-			tick := beatStart + uint32(i)*noteSpacing
-			noteDuration := noteSpacing - 10
-			noteVel := vel - uint8(i*3) // Softer for later notes
-			if noteVel < 40 {
-				noteVel = 40
-			}
-
-			events = append(events, midiEvent{tick, midi.NoteOn(0, notes[noteIdx], noteVel)})
-			events = append(events, midiEvent{tick + noteDuration, midi.NoteOff(0, notes[noteIdx])})
+			events = append(events, midiEvent{tick, midi.NoteOn(0, note, vel)})
+			events = append(events, midiEvent{tick + noteDuration, midi.NoteOff(0, note)})
 		}
 	}
 
