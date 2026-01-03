@@ -18,7 +18,7 @@ A terminal-based backing track player that uses the BTML (Backing Track Markup L
  - ✅ **Strudel export** - export to Strudel live coding format
  - ✅ Play backing tracks via FluidSynth (when installed)
 
-**Supported Styles**: Rock, Blues, Jazz, Folk, Funk, Ska, Reggae, Country, Disco, Motown/Soul, Flamenco, EDM, Trap, Ragtime, Stride, Boogie-Woogie. See [MUSIC_STYLES.md](MUSIC_STYLES.md) for music theory and implementation details.
+**Supported Styles**: Rock, Blues, Jazz, Folk, Funk, Ska, Reggae, Country, Disco, Motown/Soul, Flamenco, EDM, Trap, Ragtime, Stride, Boogie-Woogie. See [MUSIC_STYLES.md](docs/MUSIC_STYLES.md) for music theory and implementation details.
 
 ## Why BTML?
 
@@ -63,7 +63,7 @@ The YAML format is in LLM training data, making generation reliable. No GUI clic
 With Claude Desktop, you can go from a **photo of sheet music** to a **playing backing track** in under 30 seconds:
 
 1. **Take a photo** of sheet music, lead sheet, or chord chart
-2. **Upload to Claude Desktop** with the [project instructions](CLAUDE_DESKTOP_PROJECT.md)
+2. **Upload to Claude Desktop** with the [project instructions](docs/CLAUDE_DESKTOP_PROJECT.md)
 3. **Claude extracts** key, tempo, chords, and song structure
 4. **Save the BTML** and play immediately
 
@@ -81,7 +81,7 @@ With Claude Desktop, you can go from a **photo of sheet music** to a **playing b
 - Sheet music OCR → manual cleanup → DAW import → manual arrangement
 - Or: manually entering chords into Band-in-a-Box / iReal Pro
 
-With BTML + Claude, the LLM understands musical context, infers missing information, and outputs a ready-to-play backing track. See [CLAUDE_DESKTOP_PROJECT.md](CLAUDE_DESKTOP_PROJECT.md) for setup instructions.
+With BTML + Claude, the LLM understands musical context, infers missing information, and outputs a ready-to-play backing track. See [CLAUDE_DESKTOP_PROJECT.md](docs/CLAUDE_DESKTOP_PROJECT.md) for setup instructions.
 
 ## Installation
 
@@ -510,9 +510,9 @@ MIT
 ## Contributing
 
 Contributions welcome! See:
-- `BTML_MANUAL.md` for the full BTML specification
-- `MUSIC_STYLES.md` for music theory and style implementation details
-- `CLAUDE.md` for development guidelines
+- [BTML_MANUAL.md](docs/BTML_MANUAL.md) for the full BTML specification
+- [MUSIC_STYLES.md](docs/MUSIC_STYLES.md) for music theory and style implementation details
+- [CLAUDE.md](CLAUDE.md) for development guidelines
 
 ## What's New
 
