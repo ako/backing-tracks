@@ -145,11 +145,13 @@ During playback, you'll see:
 | `<` / `>` | Cycle through guitar tunings |
 | `Shift+1-9` | Loop current bar + next N-1 bars (press again to disable) |
 | `Shift+0` | Loop current section (press again to disable) |
+| `1-5` | Toggle track mute (1=drums, 2=bass, 3=chords, 4=melody, 5=fingerstyle) |
+| `;` / `'` | Cycle through fingerstyle patterns |
+| `c` | Toggle chord names display |
 | `l` | Toggle lyrics display |
-| `1` | Toggle drums mute |
-| `2` | Toggle bass mute |
-| `3` | Toggle chords mute |
-| `4` | Toggle melody mute |
+| `m` | Toggle metronome/beat counter |
+| `s` | Toggle strum pattern display |
+| `t` | Toggle inline tablature |
 | `Q` / `Esc` | Quit |
 
 ![Live Display Screenshot](screenshot-player.png)
