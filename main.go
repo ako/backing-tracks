@@ -119,7 +119,7 @@ func playTrack(filename string) {
 
 	// Play via FluidSynth with live display
 	fmt.Println("♪ Playing... (Press Ctrl+C to stop)\n")
-	if err := player.PlayMIDIWithDisplay(midiFile, track, soundFontPath); err != nil {
+	if err := player.PlayMIDIWithDisplay(midiFile, track, soundFontPath, filename); err != nil {
 		fmt.Printf("Error playing: %v\n", err)
 		os.Exit(1)
 	}

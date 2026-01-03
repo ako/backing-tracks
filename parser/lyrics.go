@@ -489,3 +489,96 @@ func GetLyricsAtBar(blocks []LyricsBlock, bar int) *LyricLine {
 	}
 	return nil
 }
+
+// SerializeBeatLyrics converts a slice of BeatLyric back to beat notation format
+// This is used when saving edited lyrics back to the BTML file
+func SerializeBeatLyrics(lyrics []BeatLyric, beatsPerBar int) string {
+	if len(lyrics) == 0 {
+		return ""
+	}
+	if beatsPerBar <= 0 {
+		beatsPerBar = 4
+	}
+
+	// Find the bar range
+	minBar := lyrics[0].Bar
+	maxBar := lyrics[0].Bar
+	for _, bl := range lyrics {
+		if bl.Bar < minBar {
+			minBar = bl.Bar
+		}
+		if bl.Bar > maxBar {
+			maxBar = bl.Bar
+		}
+	}
+
+	// Create a map for quick lookup: bar*beatsPerBar + beat -> BeatLyric
+	lyricsMap := make(map[int]*BeatLyric)
+	for i := range lyrics {
+		key := lyrics[i].Bar*beatsPerBar + lyrics[i].Beat
+		lyricsMap[key] = &lyrics[i]
+	}
+
+	// We also need to track chords that were in the original
+	// For simplicity, we'll use "/" for continuation beats
+	// The chord that was playing at each beat position
+
+	var result strings.Builder
+	barsPerLine := 2 // Output 2 bars per line (common format)
+	beatWidth := 5   // Width for each beat column
+
+	for startBar := minBar; startBar <= maxBar; startBar += barsPerLine {
+		endBar := startBar + barsPerLine
+		if endBar > maxBar+1 {
+			endBar = maxBar + 1
+		}
+
+		// Build chord line and lyrics line
+		var chordLine strings.Builder
+		var lyricsLine strings.Builder
+
+		for bar := startBar; bar < endBar; bar++ {
+			for beat := 0; beat < beatsPerBar; beat++ {
+				key := bar*beatsPerBar + beat
+				bl := lyricsMap[key]
+
+				// Chord/slash for this beat
+				chordToken := "/"
+				lyricText := ""
+
+				if bl != nil {
+					if bl.Chord != "" {
+						chordToken = bl.Chord
+					}
+					lyricText = bl.Lyrics
+				}
+
+				// Pad to beat width
+				chordPadded := chordToken
+				for len(chordPadded) < beatWidth {
+					chordPadded += " "
+				}
+				chordLine.WriteString(chordPadded)
+
+				lyricPadded := lyricText
+				for len(lyricPadded) < beatWidth {
+					lyricPadded += " "
+				}
+				lyricsLine.WriteString(lyricPadded)
+			}
+		}
+
+		// Add the lines (trim trailing whitespace)
+		chordStr := strings.TrimRight(chordLine.String(), " ")
+		lyricsStr := strings.TrimRight(lyricsLine.String(), " ")
+
+		result.WriteString(chordStr)
+		result.WriteString("\n")
+		if lyricsStr != "" {
+			result.WriteString(lyricsStr)
+			result.WriteString("\n")
+		}
+	}
+
+	return strings.TrimRight(result.String(), "\n")
+}

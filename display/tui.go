@@ -32,13 +32,13 @@ var (
 
 	chordStyle = lipgloss.NewStyle().
 			Width(20).
-			Align(lipgloss.Center)
+			Align(lipgloss.Left)
 
 	currentChordStyle = lipgloss.NewStyle().
 				Bold(true).
 				Foreground(primaryColor).
 				Width(20).
-				Align(lipgloss.Center)
+				Align(lipgloss.Left)
 
 	lyricsStyle = lipgloss.NewStyle().
 			Foreground(secondaryColor).
@@ -86,7 +86,13 @@ type PlayerController interface {
 	LoopCurrentSection()                                    // Toggle loop for current section
 	GetCurrentLyrics() (text string, chords []string)       // Get lyrics at current position
 	GetLyricsForBar(bar int) (text string, chords []string) // Get lyrics for specific bar
+	GetBeatLyricsForBar(bar int) []struct {                 // Get lyrics with beat positions
+		Beat   int
+		Lyrics string
+		Chord  string
+	}
 	HasLyrics() bool                                        // Check if track has any lyrics
+	UpdateLyrics(lyrics []parser.BeatLyric)                 // Update lyrics after editing
 }
 
 // TUIModel is the Bubbletea model for live display
@@ -130,6 +136,14 @@ type TUIModel struct {
 	showStrumPattern bool // Show strum pattern visualization
 	showTablature    bool // Show inline tablature
 	showChordNames   bool // Show chord names above lyrics
+
+	// Edit mode state (for lyrics timing adjustment)
+	editMode      bool               // Whether in edit mode
+	editBar       int                // Selected bar number
+	editBeat      int                // Selected beat within bar (0-3)
+	editLyrics    []parser.BeatLyric // Working copy of lyrics for editing
+	editDirty     bool               // Whether changes have been made
+	editFilename  string             // BTML filename for saving
 
 	// Audio player (optional - for synced playback)
 	player PlayerController
@@ -193,6 +207,11 @@ func (m *TUIModel) SetPlayer(p PlayerController) {
 	m.player = p
 }
 
+// SetFilename sets the BTML filename for saving edits
+func (m *TUIModel) SetFilename(filename string) {
+	m.editFilename = filename
+}
+
 // Init initializes the model
 func (m *TUIModel) Init() tea.Cmd {
 	m.startTime = time.Now()
@@ -213,10 +232,125 @@ func tickCmd() tea.Cmd {
 func (m *TUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		// Handle edit mode keys first
+		if m.editMode {
+			beatsPerBar := 4
+			switch msg.String() {
+			case "esc":
+				// Discard changes and exit edit mode
+				m.discardEdits()
+				return m, nil
+			case "enter":
+				// Save changes and exit edit mode
+				m.saveEdits()
+				return m, nil
+			case "left":
+				// Move to previous beat (wrap to previous bar)
+				m.editBeat--
+				if m.editBeat < 0 {
+					if m.editBar > 0 {
+						m.editBar--
+						m.editBeat = beatsPerBar - 1
+					} else {
+						m.editBeat = 0
+					}
+				}
+				return m, nil
+			case "right":
+				// Move to next beat (wrap to next bar)
+				m.editBeat++
+				if m.editBeat >= beatsPerBar {
+					if m.editBar < len(m.bars)-1 {
+						m.editBar++
+						m.editBeat = 0
+					} else {
+						m.editBeat = beatsPerBar - 1
+					}
+				}
+				return m, nil
+			case "up":
+				// Move to previous line (2 bars up)
+				if m.editBar >= 2 {
+					m.editBar -= 2
+				} else {
+					m.editBar = 0
+				}
+				return m, nil
+			case "down":
+				// Move to next line (2 bars down)
+				if m.editBar < len(m.bars)-2 {
+					m.editBar += 2
+				} else {
+					m.editBar = len(m.bars) - 1
+				}
+				return m, nil
+			case "shift+left":
+				// Move word at current position one beat earlier
+				m.moveWordEarlier()
+				return m, nil
+			case "shift+right":
+				// Move word at current position one beat later
+				m.moveWordLater()
+				return m, nil
+			case "shift+tab":
+				// Move all words from current bar one beat earlier
+				m.moveWordsEarlierFromHere()
+				return m, nil
+			case "tab":
+				// Move all words from current bar one beat later
+				m.moveWordsLaterFromHere()
+				return m, nil
+			case "backspace":
+				// Delete last character of word at selected bar/beat
+				if idx := m.getEditLyricIndex(m.editBar, m.editBeat); idx >= 0 {
+					word := m.editLyrics[idx].Lyrics
+					if len(word) > 0 {
+						m.editLyrics[idx].Lyrics = word[:len(word)-1]
+						m.editDirty = true
+					}
+				}
+				return m, nil
+			case "delete":
+				// Delete entire word at selected bar/beat
+				if idx := m.getEditLyricIndex(m.editBar, m.editBeat); idx >= 0 {
+					m.editLyrics[idx].Lyrics = ""
+					m.editDirty = true
+				}
+				return m, nil
+			default:
+				// Handle printable characters - append to word at selected bar/beat
+				key := msg.String()
+				if len(key) == 1 && key[0] >= 32 && key[0] <= 126 {
+					idx := m.getEditLyricIndex(m.editBar, m.editBeat)
+					if idx >= 0 {
+						// Append to existing word
+						m.editLyrics[idx].Lyrics += key
+						m.editDirty = true
+					} else {
+						// Create new word at this position
+						m.editLyrics = append(m.editLyrics, parser.BeatLyric{
+							Bar:    m.editBar,
+							Beat:   m.editBeat,
+							Lyrics: key,
+						})
+						m.editDirty = true
+					}
+					return m, nil
+				}
+			}
+			// Ignore other keys in edit mode
+			return m, nil
+		}
+
 		switch msg.String() {
 		case "q", "ctrl+c", "esc":
 			m.quitting = true
 			return m, tea.Quit
+		case "e":
+			// Toggle edit mode (only if track has lyrics)
+			if m.trackHasLyrics() {
+				m.toggleEditMode()
+			}
 		case " ":
 			// Toggle pause
 			if m.player != nil {
@@ -633,17 +767,28 @@ func (m *TUIModel) renderHeader() string {
 		}
 	}
 
-	return fmt.Sprintf("  %s    %s%s%s%s%s%s%s%s%s", title, info, sectionIndicator, capoIndicator, transposeIndicator, tuningIndicator, muteIndicator, scaleName, loopIndicator, pauseIndicator)
+	editIndicator := ""
+	if m.editMode {
+		editStyle := lipgloss.NewStyle().
+			Bold(true).
+			Background(lipgloss.Color("#FFFF00")).
+			Foreground(lipgloss.Color("#000000"))
+		editIndicator = editStyle.Render("  ✏ EDIT - ←/→ beat, ↑/↓ line, type to edit, Shift+←/→ move word, Tab shift all, Enter save, Esc cancel")
+	}
+
+	return fmt.Sprintf("  %s    %s%s%s%s%s%s%s%s%s%s", title, info, sectionIndicator, capoIndicator, transposeIndicator, tuningIndicator, muteIndicator, scaleName, loopIndicator, pauseIndicator, editIndicator)
 }
 
 // renderLeftColumn renders the chord/beat display
 func (m *TUIModel) renderLeftColumn() string {
 	var lines []string
 
-	// Show fewer rows when tablature is enabled (takes more vertical space)
-	maxRows := 5
+	// Adjust rows based on what's displayed (more components = fewer rows)
+	maxRows := 10 // Default: chords, lyrics, beats - compact
 	if m.showTablature {
-		maxRows = 3
+		maxRows = 3 // Tablature takes 6+ lines per row
+	} else if m.showStrumPattern {
+		maxRows = 5 // Strum pattern takes more space
 	}
 
 	startRow := m.currentBar / 2
@@ -688,34 +833,130 @@ func (m *TUIModel) renderBarRow(startBar int) string {
 
 	// Line 2: Lyrics (if enabled and available)
 	if m.showLyrics {
-		lyricsLine := "  "
-		hasAnyLyrics := false
-		for i := 0; i < 2; i++ {
-			barIdx := startBar + i
-			if barIdx < len(m.bars) {
-				// Get lyrics from player if available, otherwise from bar
-				lyrics := ""
-				if m.player != nil {
-					lyrics, _ = m.player.GetLyricsForBar(barIdx)
+		if m.editMode {
+			// Edit mode: show lyrics at beat positions with selected bar/beat highlighted
+			lyricsLine := "  "
+			beatsPerBar := 4
+
+			for i := 0; i < 2; i++ {
+				barIdx := startBar + i
+				if barIdx >= len(m.bars) {
+					continue
 				}
-				if lyrics == "" {
-					lyrics = m.bars[barIdx].Lyrics
+
+				isBarSelected := (barIdx == m.editBar)
+
+				// Build lyrics for this bar with beat-aligned words
+				beatWidth := (barWidth - 4) / beatsPerBar
+				barLyrics := ""
+
+				for beat := 0; beat < beatsPerBar; beat++ {
+					word := ""
+					isBeatSelected := isBarSelected && (beat == m.editBeat)
+
+					// Find the word at this bar/beat in editLyrics
+					for j := range m.editLyrics {
+						if m.editLyrics[j].Bar == barIdx && m.editLyrics[j].Beat == beat {
+							word = m.editLyrics[j].Lyrics
+							break
+						}
+					}
+
+					// Show cursor position even if no word
+					if word == "" && isBeatSelected {
+						word = "_" // Cursor placeholder
+					}
+
+					// Pad word to beat width
+					if len(word) > beatWidth-1 {
+						word = word[:beatWidth-1]
+					}
+					for len(word) < beatWidth {
+						word += " "
+					}
+
+					if isBeatSelected {
+						// Highlight selected beat position
+						selectedStyle := lipgloss.NewStyle().
+							Bold(true).
+							Background(lipgloss.Color("#FFFF00")).
+							Foreground(lipgloss.Color("#000000"))
+						barLyrics += selectedStyle.Render(strings.TrimRight(word, " "))
+						padding := beatWidth - len(strings.TrimRight(word, " "))
+						barLyrics += strings.Repeat(" ", padding)
+					} else {
+						barLyrics += word
+					}
 				}
-				if lyrics != "" {
-					hasAnyLyrics = true
-				}
-				if len(lyrics) > barWidth-2 {
-					lyrics = lyrics[:barWidth-2]
-				}
+
+				// Highlight entire bar if selected
 				style := lyricsStyle.Width(barWidth)
-				if barIdx == m.currentBar && lyrics != "" {
+				if isBarSelected {
+					style = style.Bold(true).Background(lipgloss.Color("#333333"))
+				}
+				lyricsLine += style.Render(barLyrics)
+			}
+
+			// Always show lyrics line in edit mode (cursor needs to be visible)
+			lines = append(lines, lyricsLine)
+		} else {
+			// Normal mode: show lyrics at beat positions
+			lyricsLine := "  "
+			hasAnyLyrics := false
+			beatsPerBar := 4
+
+			for i := 0; i < 2; i++ {
+				barIdx := startBar + i
+				if barIdx >= len(m.bars) {
+					continue
+				}
+
+				// Build lyrics for this bar with beat-aligned words
+				beatWidth := (barWidth - 4) / beatsPerBar
+				barLyrics := ""
+
+				// Get beat lyrics from player if available
+				var beatLyricsForBar []struct {
+					Beat   int
+					Lyrics string
+					Chord  string
+				}
+				if m.player != nil {
+					beatLyricsForBar = m.player.GetBeatLyricsForBar(barIdx)
+				}
+
+				for beat := 0; beat < beatsPerBar; beat++ {
+					word := ""
+
+					// Find lyrics at this beat
+					for _, bl := range beatLyricsForBar {
+						if bl.Beat == beat && bl.Lyrics != "" {
+							word = bl.Lyrics
+							hasAnyLyrics = true
+							break
+						}
+					}
+
+					// Pad word to beat width
+					if len(word) > beatWidth-1 {
+						word = word[:beatWidth-1]
+					}
+					for len(word) < beatWidth {
+						word += " "
+					}
+					barLyrics += word
+				}
+
+				style := lyricsStyle.Width(barWidth)
+				if barIdx == m.currentBar {
 					style = style.Bold(true)
 				}
-				lyricsLine += style.Render(lyrics)
+				lyricsLine += style.Render(barLyrics)
 			}
-		}
-		if hasAnyLyrics {
-			lines = append(lines, lyricsLine)
+
+			if hasAnyLyrics {
+				lines = append(lines, lyricsLine)
+			}
 		}
 	}
 
@@ -752,9 +993,6 @@ func (m *TUIModel) renderBarRow(startBar int) string {
 			lines = append(lines, tabLines...)
 		}
 	}
-
-	// Separator
-	lines = append(lines, "  "+strings.Repeat("─", barWidth*2))
 
 	return strings.Join(lines, "\n")
 }
@@ -1310,6 +1548,345 @@ func (m *TUIModel) cycleTuning(offset int) {
 	m.updateTablatureConfig()
 }
 
+// trackHasLyrics checks if the track has any lyrics (in sections or at track level)
+func (m *TUIModel) trackHasLyrics() bool {
+	if m.track == nil {
+		return false
+	}
+	// Check section-level beat-mapped lyrics
+	for _, section := range m.track.Sections {
+		if section.Lyrics != "" {
+			return true
+		}
+	}
+	// Check track-level per-bar lyrics
+	for _, lyric := range m.track.Lyrics {
+		if lyric != "" {
+			return true
+		}
+	}
+	return false
+}
+
+// toggleEditMode enters or exits lyrics edit mode
+func (m *TUIModel) toggleEditMode() {
+	if m.editMode {
+		// Already in edit mode - exit without saving
+		m.discardEdits()
+		return
+	}
+
+	// Build the editLyrics from track's lyrics data
+	m.editLyrics = m.collectAllLyrics()
+
+	// Pause playback when entering edit mode
+	if m.player != nil && !m.player.IsPaused() {
+		m.player.TogglePause()
+	}
+
+	m.editMode = true
+	m.editBar = m.currentBar // Start at current playback position
+	m.editBeat = 0
+	m.editDirty = false
+}
+
+// collectAllLyrics gathers all beat lyrics from all sections or track-level lyrics
+func (m *TUIModel) collectAllLyrics() []parser.BeatLyric {
+	var result []parser.BeatLyric
+
+	// Get beats per bar from time signature
+	beatsPerBar := 4
+	if m.track.Info.TimeSignature != "" {
+		if _, err := fmt.Sscanf(m.track.Info.TimeSignature, "%d/", &beatsPerBar); err != nil {
+			beatsPerBar = 4
+		}
+	}
+
+	// First try section-level beat-mapped lyrics
+	sectionInfos := m.track.GetSectionInfos()
+	for _, info := range sectionInfos {
+		for i := range m.track.Sections {
+			if m.track.Sections[i].Name == info.Name && m.track.Sections[i].Lyrics != "" {
+				lyrics := parser.ParseBeatLyrics(m.track.Sections[i].Lyrics, info.StartBar, beatsPerBar)
+				// Only include entries that have actual lyrics text
+				for _, bl := range lyrics {
+					if bl.Lyrics != "" {
+						result = append(result, bl)
+					}
+				}
+				break
+			}
+		}
+	}
+
+	// If no section lyrics, try track-level per-bar lyrics
+	if len(result) == 0 && len(m.track.Lyrics) > 0 {
+		for bar, lyric := range m.track.Lyrics {
+			if lyric != "" {
+				result = append(result, parser.BeatLyric{
+					Bar:    bar,
+					Beat:   0, // Per-bar lyrics start at beat 0
+					Lyrics: lyric,
+				})
+			}
+		}
+	}
+
+	return result
+}
+
+// moveWordEarlier moves the word at selected bar/beat one beat earlier
+func (m *TUIModel) moveWordEarlier() {
+	idx := m.getEditLyricIndex(m.editBar, m.editBeat)
+	if idx < 0 {
+		return
+	}
+
+	beatsPerBar := 4
+	if m.track.Info.TimeSignature != "" {
+		fmt.Sscanf(m.track.Info.TimeSignature, "%d/", &beatsPerBar)
+	}
+
+	bl := &m.editLyrics[idx]
+
+	// Move one beat earlier
+	bl.Beat--
+	if bl.Beat < 0 {
+		bl.Beat = beatsPerBar - 1
+		bl.Bar--
+		if bl.Bar < 0 {
+			// Can't go before bar 0
+			bl.Bar = 0
+			bl.Beat = 0
+		}
+	}
+
+	m.editDirty = true
+}
+
+// moveWordLater moves the word at selected bar/beat one beat later
+func (m *TUIModel) moveWordLater() {
+	idx := m.getEditLyricIndex(m.editBar, m.editBeat)
+	if idx < 0 {
+		return
+	}
+
+	beatsPerBar := 4
+	if m.track.Info.TimeSignature != "" {
+		fmt.Sscanf(m.track.Info.TimeSignature, "%d/", &beatsPerBar)
+	}
+
+	bl := &m.editLyrics[idx]
+
+	// Move one beat later
+	bl.Beat++
+	if bl.Beat >= beatsPerBar {
+		bl.Beat = 0
+		bl.Bar++
+	}
+
+	m.editDirty = true
+}
+
+// moveWordsEarlierFromHere moves all words from current bar onwards one beat earlier
+func (m *TUIModel) moveWordsEarlierFromHere() {
+	if len(m.editLyrics) == 0 {
+		return
+	}
+
+	beatsPerBar := 4
+	if m.track.Info.TimeSignature != "" {
+		fmt.Sscanf(m.track.Info.TimeSignature, "%d/", &beatsPerBar)
+	}
+
+	// Move all words from current bar onwards
+	for i := range m.editLyrics {
+		bl := &m.editLyrics[i]
+		if bl.Bar < m.editBar || (bl.Bar == m.editBar && bl.Beat < m.editBeat) {
+			continue // Skip words before current position
+		}
+		bl.Beat--
+		if bl.Beat < 0 {
+			bl.Beat = beatsPerBar - 1
+			bl.Bar--
+			if bl.Bar < 0 {
+				bl.Bar = 0
+				bl.Beat = 0
+			}
+		}
+	}
+
+	m.editDirty = true
+}
+
+// moveWordsLaterFromHere moves all words from current bar onwards one beat later
+func (m *TUIModel) moveWordsLaterFromHere() {
+	if len(m.editLyrics) == 0 {
+		return
+	}
+
+	beatsPerBar := 4
+	if m.track.Info.TimeSignature != "" {
+		fmt.Sscanf(m.track.Info.TimeSignature, "%d/", &beatsPerBar)
+	}
+
+	// Move all words from current bar onwards
+	for i := range m.editLyrics {
+		bl := &m.editLyrics[i]
+		if bl.Bar < m.editBar || (bl.Bar == m.editBar && bl.Beat < m.editBeat) {
+			continue // Skip words before current position
+		}
+		bl.Beat++
+		if bl.Beat >= beatsPerBar {
+			bl.Beat = 0
+			bl.Bar++
+		}
+	}
+
+	m.editDirty = true
+}
+
+// saveEdits saves the edited lyrics back to the BTML file
+func (m *TUIModel) saveEdits() {
+	if !m.editDirty {
+		m.editMode = false
+		return
+	}
+
+	// Get beats per bar
+	beatsPerBar := 4
+	if m.track.Info.TimeSignature != "" {
+		fmt.Sscanf(m.track.Info.TimeSignature, "%d/", &beatsPerBar)
+	}
+
+	// Check if we have section-level lyrics
+	hasSectionLyrics := false
+	for _, section := range m.track.Sections {
+		if section.Lyrics != "" {
+			hasSectionLyrics = true
+			break
+		}
+	}
+
+	if hasSectionLyrics {
+		// Save to section-level beat-mapped lyrics
+		sectionInfos := m.track.GetSectionInfos()
+
+		for i := range m.track.Sections {
+			section := &m.track.Sections[i]
+			if section.Lyrics == "" {
+				continue
+			}
+
+			// Find the section info
+			var sectionStart, sectionEnd int
+			for _, info := range sectionInfos {
+				if info.Name == section.Name {
+					sectionStart = info.StartBar
+					sectionEnd = info.EndBar
+					break
+				}
+			}
+
+			// Collect edited lyrics for this section
+			var sectionLyrics []parser.BeatLyric
+			for _, bl := range m.editLyrics {
+				if bl.Bar >= sectionStart && bl.Bar < sectionEnd {
+					// Adjust bar to be relative to section start for serialization
+					adjusted := bl
+					adjusted.Bar -= sectionStart
+					sectionLyrics = append(sectionLyrics, adjusted)
+				}
+			}
+
+			// Serialize back to beat notation format
+			if len(sectionLyrics) > 0 {
+				section.Lyrics = parser.SerializeBeatLyrics(sectionLyrics, beatsPerBar)
+			}
+		}
+	} else {
+		// Save to track-level per-bar lyrics
+		// Find the max bar number to size the array
+		maxBar := 0
+		for _, bl := range m.editLyrics {
+			if bl.Bar > maxBar {
+				maxBar = bl.Bar
+			}
+		}
+
+		// Create new lyrics array
+		newLyrics := make([]string, maxBar+1)
+		for _, bl := range m.editLyrics {
+			// For per-bar format, we put the lyric at its bar position
+			// If multiple words land on same bar, concatenate them
+			if newLyrics[bl.Bar] != "" {
+				newLyrics[bl.Bar] += " " + bl.Lyrics
+			} else {
+				newLyrics[bl.Bar] = bl.Lyrics
+			}
+		}
+		m.track.Lyrics = newLyrics
+	}
+
+	// Save the track to file
+	if m.editFilename != "" {
+		if err := parser.SaveTrack(m.track, m.editFilename); err != nil {
+			// TODO: Show error to user
+		}
+	}
+
+	// Update the player's lyrics so the display reflects the changes
+	if m.player != nil {
+		m.player.UpdateLyrics(m.editLyrics)
+	}
+
+	m.editMode = false
+	m.editDirty = false
+}
+
+// discardEdits exits edit mode without saving
+func (m *TUIModel) discardEdits() {
+	m.editMode = false
+	m.editLyrics = nil
+	m.editDirty = false
+}
+
+// getEditLyricAt returns the edited lyrics at a specific bar/beat, or nil
+func (m *TUIModel) getEditLyricAt(bar, beat int) *parser.BeatLyric {
+	for i := range m.editLyrics {
+		if m.editLyrics[i].Bar == bar && m.editLyrics[i].Beat == beat {
+			return &m.editLyrics[i]
+		}
+	}
+	return nil
+}
+
+// getEditLyricIndex returns the index of lyrics at a specific bar/beat, or -1 if not found
+func (m *TUIModel) getEditLyricIndex(bar, beat int) int {
+	for i := range m.editLyrics {
+		if m.editLyrics[i].Bar == bar && m.editLyrics[i].Beat == beat {
+			return i
+		}
+	}
+	return -1
+}
+
+// isEditSelected returns true if the given bar/beat is currently selected
+func (m *TUIModel) isEditSelected(bar, beat int) bool {
+	if !m.editMode {
+		return false
+	}
+	return m.editBar == bar && m.editBeat == beat
+}
+
+// isEditBarSelected returns true if the given bar is currently selected
+func (m *TUIModel) isEditBarSelected(bar int) bool {
+	if !m.editMode {
+		return false
+	}
+	return m.editBar == bar
+}
+
 // renderRightColumn renders the chord charts and picking pattern
 func (m *TUIModel) renderRightColumn() string {
 	var lines []string
@@ -1607,7 +2184,7 @@ func (m *TUIModel) renderProgressBar() string {
 	}
 
 	controls1 := headerStyle.Render("  [space] pause [←/→] seek [↑/↓] transpose [Shift+↑/↓] tempo [[/]] capo [</>] tuning [1-5] mute")
-	controls2 := headerStyle.Render("  [l]yrics [m]etro [s]trum [t]ab [c]hord [;/'] pattern [Shift+1-9] loop [q]uit")
+	controls2 := headerStyle.Render("  [l]yrics [m]etro [s]trum [t]ab [c]hord [e]dit [;/'] pattern [Shift+1-9] loop [q]uit")
 
 	return fmt.Sprintf("  %s  %d%% (bar %d/%d)%s\n%s\n%s",
 		progressStyle.Render(bar),

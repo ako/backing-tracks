@@ -16,7 +16,8 @@ import (
 )
 
 // PlayMIDIWithDisplay plays a MIDI file using FluidSynth with live TUI display
-func PlayMIDIWithDisplay(midiFile string, track *parser.Track, customSoundFont string) error {
+// btmlFilename is the original BTML file path (used for saving edits)
+func PlayMIDIWithDisplay(midiFile string, track *parser.Track, customSoundFont string, btmlFilename string) error {
 	// Check if FluidSynth is installed
 	if _, err := exec.LookPath("fluidsynth"); err != nil {
 		return fmt.Errorf("fluidsynth not found: please install with 'sudo apt install fluidsynth'")
@@ -48,6 +49,7 @@ func PlayMIDIWithDisplay(midiFile string, track *parser.Track, customSoundFont s
 	// Create TUI model and connect to player
 	tuiModel := display.NewTUIModel(track)
 	tuiModel.SetPlayer(player)
+	tuiModel.SetFilename(btmlFilename)
 
 	// Start playback
 	player.Start()

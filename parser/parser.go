@@ -317,3 +317,26 @@ type Melody struct {
 type ScaleConfig struct {
 	Type string `yaml:"type,omitempty"` // pentatonic_minor, blues, dorian, etc.
 }
+
+// GetSectionInfos returns section info from the track's progression
+func (t *Track) GetSectionInfos() []SectionInfo {
+	return t.Progression.GetSections()
+}
+
+// SaveTrack writes the track back to a BTML file
+func SaveTrack(track *Track, filename string) error {
+	// Create a backup first
+	backupFilename := filename + ".bak"
+	if data, err := os.ReadFile(filename); err == nil {
+		os.WriteFile(backupFilename, data, 0644)
+	}
+
+	// Marshal the track to YAML
+	data, err := yaml.Marshal(track)
+	if err != nil {
+		return err
+	}
+
+	// Write to file
+	return os.WriteFile(filename, data, 0644)
+}

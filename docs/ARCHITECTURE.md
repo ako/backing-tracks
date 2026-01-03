@@ -397,7 +397,19 @@ graph TB
 | s | Toggle strum pattern display |
 | t | Toggle inline tablature |
 | c | Toggle chord names display |
+| e | Enter lyrics edit mode |
 | q | Quit |
+
+### Lyrics Edit Mode (when in edit mode)
+
+| Key | Action |
+|-----|--------|
+| ← | Select previous word |
+| → | Select next word |
+| Shift+← | Move selected word one beat earlier |
+| Shift+→ | Move selected word one beat later |
+| Enter | Save changes and exit edit mode |
+| Esc | Discard changes and exit edit mode |
 
 ---
 

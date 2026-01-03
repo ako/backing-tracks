@@ -655,6 +655,29 @@ func (p *RealtimePlayer) HasLyrics() bool {
 	return len(p.playbackData.Lyrics) > 0 || p.playbackData.HasBeatLyrics()
 }
 
+// UpdateLyrics updates the player's lyrics data after editing
+func (p *RealtimePlayer) UpdateLyrics(lyrics []parser.BeatLyric) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	// Clear legacy lyrics format to avoid conflicts
+	p.playbackData.Lyrics = nil
+
+	// Update beat lyrics in playback data
+	// Create a single LyricsData containing all lyrics
+	if len(lyrics) > 0 {
+		p.playbackData.BeatLyrics = []parser.LyricsData{
+			{
+				SectionName: "edited",
+				BeatLyrics:  lyrics,
+				StartBar:    0,
+				EndBar:      p.playbackData.TotalBars,
+				BeatsPerBar: p.playbackData.BeatsPerBar,
+			},
+		}
+	}
+}
+
 // getSpeedAdjustedElapsed returns the elapsed playback time adjusted for tempo changes (must be called with lock held)
 func (p *RealtimePlayer) getSpeedAdjustedElapsed() time.Duration {
 	realElapsed := time.Since(p.startTime) - p.pausedTotal + p.seekOffset

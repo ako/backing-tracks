@@ -1,4 +1,4 @@
-# Backing Tracks - v0.6
+# Backing Tracks - v0.7
 
 A terminal-based backing track player that uses the BTML (Backing Track Markup Language) DSL. Generate complete backing tracks with chords, bass, drums, and auto-generated melodies with real-time scale visualization!
 
@@ -148,11 +148,20 @@ During playback, you'll see:
 | `1-5` | Toggle track mute (1=drums, 2=bass, 3=chords, 4=melody, 5=fingerstyle) |
 | `;` / `'` | Cycle through fingerstyle patterns |
 | `c` | Toggle chord names display |
+| `e` | Enter lyrics edit mode |
 | `l` | Toggle lyrics display |
 | `m` | Toggle metronome/beat counter |
 | `s` | Toggle strum pattern display |
 | `t` | Toggle inline tablature |
 | `Q` / `Esc` | Quit |
+
+**Lyrics Edit Mode** (press `e` to enter when track has lyrics):
+| Key | Action |
+|-----|--------|
+| `←` / `→` | Select previous / next word |
+| `Shift+←` / `Shift+→` | Move selected word one beat earlier / later |
+| `Enter` | Save changes to BTML file and exit |
+| `Esc` | Discard changes and exit |
 
 ![Live Display Screenshot](screenshot-player.png)
 
