@@ -384,11 +384,19 @@ graph TB
 | Space | Pause/Resume |
 | ←/→ | Seek by 1 bar |
 | ↑/↓ | Transpose semitone |
-| [/] | Adjust capo |
-| 1-5 | Mute track |
+| Shift+↑/↓ | Adjust tempo ±5 BPM |
+| [/] | Adjust capo (with audio transpose) |
+| {/} | Visual capo only (no audio change) |
+| </> | Cycle through tunings |
+| 1-5 | Mute track (1=drums, 2=bass, 3=chords, 4=melody, 5=fingerstyle) |
+| Shift+1-9 | Loop N bars from current position |
+| Shift+0 | Loop current section |
 | ;/' | Cycle fingerstyle pattern |
-| l | Toggle lyrics |
-| t | Toggle tablature |
+| l | Toggle lyrics display |
+| m | Toggle metronome/beat counter |
+| s | Toggle strum pattern display |
+| t | Toggle inline tablature |
+| c | Toggle chord names display |
 | q | Quit |
 
 ---

@@ -293,6 +293,124 @@ func GenerateBassLine(chords []parser.Chord, bass *parser.Bass, ticksPerBar uint
 				})
 			}
 
+		case "slap_king", "level42", "mark_king":
+			// Mark King / Level 42 style - machine gun 16th note slap bass
+			// Extremely busy double-thumbing with octave pops
+			// "Lessons in Love", "Something About You" style
+			sixteenthNote := ticksPerBar / 16
+
+			// Busy 16th note pattern with thumb slaps and pops
+			// T=thumb (low), P=pop (octave), g=ghost note
+			// Pattern: T g P g T g P T g P g T P g T P
+			kingPattern := []struct {
+				pos      int
+				interval int  // 0=root, 12=octave, 7=fifth
+				vel      uint8
+				duration uint32
+			}{
+				{0, 0, 110, sixteenthNote - 10},   // T - strong thumb on 1
+				{1, 0, 50, sixteenthNote / 2},     // g - ghost
+				{2, 12, 100, sixteenthNote - 10},  // P - pop octave
+				{3, 0, 55, sixteenthNote / 2},     // g - ghost
+				{4, 0, 95, sixteenthNote - 10},    // T - thumb
+				{5, 0, 50, sixteenthNote / 2},     // g - ghost
+				{6, 12, 105, sixteenthNote - 10},  // P - pop
+				{7, 0, 90, sixteenthNote - 10},    // T - thumb
+				{8, 0, 55, sixteenthNote / 2},     // g - ghost
+				{9, 12, 100, sixteenthNote - 10},  // P - pop
+				{10, 0, 50, sixteenthNote / 2},    // g - ghost
+				{11, 0, 85, sixteenthNote - 10},   // T - thumb
+				{12, 12, 105, sixteenthNote - 10}, // P - pop accent on 4
+				{13, 0, 55, sixteenthNote / 2},    // g - ghost
+				{14, 0, 95, sixteenthNote - 10},   // T - thumb
+				{15, 12, 100, sixteenthNote - 10}, // P - pop pickup
+			}
+
+			for _, p := range kingPattern {
+				tick := currentTick + uint32(p.pos)*sixteenthNote
+				notes = append(notes, BassNote{
+					Note:     root + 36 + uint8(p.interval),
+					Tick:     tick,
+					Duration: p.duration,
+					Velocity: p.vel,
+				})
+			}
+
+		case "slap_flea", "rhcp", "flea":
+			// Flea / RHCP style - groovy slap with space
+			// Heavy thumb slaps, popping octaves, funky syncopation
+			// "Higher Ground", "Give It Away" style
+			sixteenthNote := ticksPerBar / 16
+			fifth := root + 7
+
+			// Flea's groove: heavy on the one, syncopated pops, space to breathe
+			// More groove-oriented than Mark King's machine gun style
+			fleaPattern := []struct {
+				pos      int
+				interval int
+				vel      uint8
+				duration uint32
+			}{
+				{0, 0, 120, sixteenthNote * 2},    // HEAVY thumb on 1
+				{2, 12, 95, sixteenthNote - 10},   // pop octave
+				{4, 0, 60, sixteenthNote / 2},     // ghost
+				{5, 7, 85, sixteenthNote - 10},    // fifth
+				{6, 12, 100, sixteenthNote - 10},  // pop
+				{8, 0, 110, sixteenthNote * 2},    // thumb on 3
+				{10, 12, 90, sixteenthNote - 10},  // pop
+				{11, 0, 55, sixteenthNote / 2},    // ghost
+				{12, 7, 80, sixteenthNote - 10},   // fifth
+				{14, 12, 105, sixteenthNote - 10}, // pop pickup
+				{15, 0, 70, sixteenthNote - 10},   // thumb pickup
+			}
+
+			for _, p := range fleaPattern {
+				tick := currentTick + uint32(p.pos)*sixteenthNote
+				note := root + 36
+				if p.interval == 12 {
+					note = root + 48 // octave
+				} else if p.interval == 7 {
+					note = fifth + 36
+				}
+				notes = append(notes, BassNote{
+					Note:     note,
+					Tick:     tick,
+					Duration: p.duration,
+					Velocity: p.vel,
+				})
+			}
+
+		case "slap_thumbpop", "thumbpop":
+			// Classic thumb-pop alternating pattern
+			// Larry Graham style - the original slap bass
+			sixteenthNote := ticksPerBar / 16
+
+			// Simple but effective: thumb on beats, pop on off-beats
+			thumbPopPattern := []struct {
+				pos      int
+				interval int
+				vel      uint8
+			}{
+				{0, 0, 105},  // T - thumb
+				{2, 12, 95},  // P - pop
+				{4, 0, 100},  // T
+				{6, 12, 90},  // P
+				{8, 0, 105},  // T
+				{10, 12, 95}, // P
+				{12, 0, 100}, // T
+				{14, 12, 90}, // P
+			}
+
+			for _, p := range thumbPopPattern {
+				tick := currentTick + uint32(p.pos)*sixteenthNote
+				notes = append(notes, BassNote{
+					Note:     root + 36 + uint8(p.interval),
+					Tick:     tick,
+					Duration: sixteenthNote*2 - 15,
+					Velocity: p.vel,
+				})
+			}
+
 		case "ska":
 			// Ska bass - walking pattern, often with octave jumps
 			// Madness/Specials style

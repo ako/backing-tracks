@@ -483,6 +483,14 @@ bass:
 | `808_octave` / `edm` | Sub bass with octave jumps | EDM, house |
 | `funk` / `slap` | Syncopated slap bass | Funk, R&B |
 | `funk_simple` | Simpler funk bass | Funk soul |
+| `slap_king` / `level42` | Mark King machine-gun 16th slap | Level 42, 80s funk |
+| `slap_flea` / `rhcp` | Flea groove slap with space | RHCP, funk rock |
+| `slap_thumbpop` | Classic Larry Graham thumb-pop | Sly & Family Stone |
+| `motown` / `soul` | Melodic James Jamerson style | Motown, soul |
+| `disco` | Driving octave pattern | Disco, dance |
+| `ska` | Walking with octave jumps | Ska, reggae |
+| `reggae` / `one_drop` | Sparse, heavy root-fifth | Reggae, dub |
+| `country` / `train` | Alternating root-fifth | Country, bluegrass |
 
 ---
 

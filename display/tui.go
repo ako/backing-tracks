@@ -122,8 +122,14 @@ type TUIModel struct {
 	seekOffset      time.Duration // For seeking forward/backward
 	transposeOffset int           // Semitones to transpose (+/-)
 	capoPosition    int           // Capo fret position (0 = no capo)
-	lyricsEnabled   bool          // Show lyrics display
 	quitting        bool
+
+	// Display toggles (for left column components)
+	showLyrics       bool // Show lyrics display
+	showMetronome    bool // Show beat counter/metronome
+	showStrumPattern bool // Show strum pattern visualization
+	showTablature    bool // Show inline tablature
+	showChordNames   bool // Show chord names above lyrics
 
 	// Audio player (optional - for synced playback)
 	player PlayerController
@@ -157,23 +163,28 @@ func NewTUIModel(track *parser.Track) *TUIModel {
 	}
 
 	return &TUIModel{
-		track:         track,
-		bars:          bars,
-		chords:        track.Progression.GetChords(),
-		tempo:         track.Info.Tempo,
-		timePerBeat:   timePerBeat,
-		fretboard:     fretboard,
-		chordChart:    chordChart,
-		tablature:     tablature,
-		currentScale:  scale,
-		tuning:        tuning,
-		tuningIndex:   tuningIndex,
-		tuningName:    tuningName,
-		capoPosition:  track.Info.Capo, // Initialize from track
-		lyricsEnabled: hasLyrics,       // Enable by default if track has lyrics
-		playing:       true,
-		width:         120,
-		height:        30,
+		track:            track,
+		bars:             bars,
+		chords:           track.Progression.GetChords(),
+		tempo:            track.Info.Tempo,
+		timePerBeat:      timePerBeat,
+		fretboard:        fretboard,
+		chordChart:       chordChart,
+		tablature:        tablature,
+		currentScale:     scale,
+		tuning:           tuning,
+		tuningIndex:      tuningIndex,
+		tuningName:       tuningName,
+		capoPosition:     track.Info.Capo, // Initialize from track
+		playing:          true,
+		width:            120,
+		height:           30,
+		// Display toggles - sensible defaults
+		showLyrics:       hasLyrics, // Enable by default if track has lyrics
+		showMetronome:    true,      // Show beat counter by default
+		showStrumPattern: true,      // Show strum pattern by default
+		showTablature:    false,     // Inline tablature disabled by default
+		showChordNames:   true,      // Show chord names by default
 	}
 }
 
@@ -381,13 +392,20 @@ func (m *TUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "l":
 			// Toggle lyrics display
 			if m.player != nil && m.player.HasLyrics() {
-				m.lyricsEnabled = !m.lyricsEnabled
+				m.showLyrics = !m.showLyrics
 			}
+		case "m":
+			// Toggle metronome/beat counter
+			m.showMetronome = !m.showMetronome
+		case "s":
+			// Toggle strum pattern
+			m.showStrumPattern = !m.showStrumPattern
+		case "c":
+			// Toggle chord names display
+			m.showChordNames = !m.showChordNames
 		case "t":
-			// Toggle tablature display
-			if m.tablature != nil {
-				m.tablature.Toggle()
-			}
+			// Toggle inline tablature display in left column
+			m.showTablature = !m.showTablature
 		case ";":
 			// Previous pattern type
 			if m.tablature != nil {
@@ -478,27 +496,23 @@ func (m *TUIModel) View() string {
 	b.WriteString(m.renderHeader())
 	b.WriteString("\n\n")
 
-	// Three-column layout
+	// Three-column layout (left column is wider now)
 	leftCol := m.renderLeftColumn()
 	middleCol := m.renderMiddleColumn()
 	rightCol := m.renderRightColumn()
 
+	// Use wider style for left column
+	wideColumnStyle := lipgloss.NewStyle().Padding(0, 1).Width(80)
+
 	// Join columns horizontally
 	row := lipgloss.JoinHorizontal(
 		lipgloss.Top,
-		columnStyle.Render(leftCol),
+		wideColumnStyle.Render(leftCol),
 		borderStyle.Render(middleCol),
 		borderStyle.Render(rightCol),
 	)
 	b.WriteString(row)
 	b.WriteString("\n\n")
-
-	// Tablature display (if enabled)
-	if m.tablature != nil && m.tablature.IsEnabled() {
-		m.tablature.SetWidth(m.width)
-		b.WriteString(m.tablature.Render())
-		b.WriteString("\n\n")
-	}
 
 	// Progress bar
 	b.WriteString(m.renderProgressBar())
@@ -626,13 +640,18 @@ func (m *TUIModel) renderHeader() string {
 func (m *TUIModel) renderLeftColumn() string {
 	var lines []string
 
-	// Show 4 rows of 2 bars each
+	// Show fewer rows when tablature is enabled (takes more vertical space)
+	maxRows := 5
+	if m.showTablature {
+		maxRows = 3
+	}
+
 	startRow := m.currentBar / 2
 	if startRow > 0 {
 		startRow-- // Show previous row for context
 	}
 
-	for row := 0; row < 4; row++ {
+	for row := 0; row < maxRows; row++ {
 		barIdx := (startRow + row) * 2
 		if barIdx >= len(m.bars) {
 			break
@@ -648,25 +667,27 @@ func (m *TUIModel) renderLeftColumn() string {
 // renderBarRow renders a row of 2 bars
 func (m *TUIModel) renderBarRow(startBar int) string {
 	var lines []string
-	barWidth := 34
+	barWidth := 36 // Slightly wider for better readability
 
-	// Line 1: Chord names
-	chordLine := "  "
-	for i := 0; i < 2; i++ {
-		barIdx := startBar + i
-		if barIdx < len(m.bars) {
-			chord := m.getBarChordName(barIdx)
-			if barIdx == m.currentBar {
-				chordLine += currentChordStyle.Width(barWidth).Render(chord)
-			} else {
-				chordLine += chordStyle.Width(barWidth).Render(chord)
+	// Line 1: Chord names (if enabled)
+	if m.showChordNames {
+		chordLine := "  "
+		for i := 0; i < 2; i++ {
+			barIdx := startBar + i
+			if barIdx < len(m.bars) {
+				chord := m.getBarChordName(barIdx)
+				if barIdx == m.currentBar {
+					chordLine += currentChordStyle.Width(barWidth).Render(chord)
+				} else {
+					chordLine += chordStyle.Width(barWidth).Render(chord)
+				}
 			}
 		}
+		lines = append(lines, chordLine)
 	}
-	lines = append(lines, chordLine)
 
-	// Line 2: Lyrics (only if enabled and available)
-	if m.lyricsEnabled {
+	// Line 2: Lyrics (if enabled and available)
+	if m.showLyrics {
 		lyricsLine := "  "
 		hasAnyLyrics := false
 		for i := 0; i < 2; i++ {
@@ -698,27 +719,39 @@ func (m *TUIModel) renderBarRow(startBar int) string {
 		}
 	}
 
-	// Line 3: Strum pattern
-	strumLine := "  "
-	for i := 0; i < 2; i++ {
-		barIdx := startBar + i
-		if barIdx < len(m.bars) {
-			pattern := m.renderStrumPattern(barIdx == m.currentBar)
-			strumLine += lipgloss.NewStyle().Width(barWidth).Render(pattern)
+	// Line 3: Strum pattern (if enabled)
+	if m.showStrumPattern {
+		strumLine := "  "
+		for i := 0; i < 2; i++ {
+			barIdx := startBar + i
+			if barIdx < len(m.bars) {
+				pattern := m.renderStrumPattern(barIdx == m.currentBar)
+				strumLine += lipgloss.NewStyle().Width(barWidth).Render(pattern)
+			}
 		}
+		lines = append(lines, strumLine)
 	}
-	lines = append(lines, strumLine)
 
-	// Line 4: Beat numbers
-	beatLine := "  "
-	for i := 0; i < 2; i++ {
-		barIdx := startBar + i
-		if barIdx < len(m.bars) {
-			beats := m.renderBeatNumbers(barIdx == m.currentBar)
-			beatLine += lipgloss.NewStyle().Width(barWidth).Render(beats)
+	// Line 4: Beat numbers/metronome (if enabled)
+	if m.showMetronome {
+		beatLine := "  "
+		for i := 0; i < 2; i++ {
+			barIdx := startBar + i
+			if barIdx < len(m.bars) {
+				beats := m.renderBeatNumbers(barIdx == m.currentBar)
+				beatLine += lipgloss.NewStyle().Width(barWidth).Render(beats)
+			}
+		}
+		lines = append(lines, beatLine)
+	}
+
+	// Line 5+: Inline tablature (if enabled) - 6 strings
+	if m.showTablature && m.tablature != nil {
+		tabLines := m.renderInlineTablature(startBar, barWidth)
+		if len(tabLines) > 0 {
+			lines = append(lines, tabLines...)
 		}
 	}
-	lines = append(lines, beatLine)
 
 	// Separator
 	lines = append(lines, "  "+strings.Repeat("─", barWidth*2))
@@ -858,6 +891,109 @@ func (m *TUIModel) renderBeatNumbers16th(isCurrent bool) string {
 	}
 
 	return " " + strings.Join(result, " ")
+}
+
+// renderInlineTablature renders a 6-string tablature for 2 bars matching the width of other components
+func (m *TUIModel) renderInlineTablature(startBar int, barWidth int) []string {
+	if m.tablature == nil || m.tablature.tablature == nil {
+		return nil
+	}
+
+	// Get tuning for string names
+	stringNames := []string{"e", "B", "G", "D", "A", "E"}
+	if len(m.tuning.Names) >= 6 {
+		for i := 0; i < 6; i++ {
+			stringNames[i] = m.tuning.Names[5-i] // Reverse: high to low
+		}
+	}
+
+	tabStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#888888"))
+	fretStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFFFF"))
+	activeStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF00")).Bold(true)
+
+	// Build 6 lines, one per string
+	var lines []string
+	beatsPerBar := 8 // 8th note resolution
+
+	// Calculate spacing to match bar width (barWidth includes some padding)
+	// Each bar needs beatsPerBar positions plus separators
+	posWidth := (barWidth - 4) / beatsPerBar // Width per position
+	if posWidth < 2 {
+		posWidth = 2
+	}
+
+	for stringIdx := 0; stringIdx < 6; stringIdx++ {
+		actualString := 5 - stringIdx // Convert display index to internal (0=low E, 5=high e)
+
+		// String name
+		name := stringNames[stringIdx]
+		if len(name) == 1 {
+			name = name + " "
+		}
+
+		var barParts []string
+		for barOffset := 0; barOffset < 2; barOffset++ {
+			barIdx := startBar + barOffset
+			isCurrentBar := barIdx == m.currentBar
+
+			tabBar, _ := m.tablature.tablature.GetCurrentAndNextBars(barIdx)
+
+			// Build the string line for this bar
+			positions := make([]string, beatsPerBar)
+			for i := range positions {
+				positions[i] = ""
+			}
+
+			if tabBar != nil {
+				for _, note := range tabBar.Notes {
+					if note.String != actualString {
+						continue
+					}
+					// Map beat (1-5) to position (0-7)
+					pos := int((note.Beat - 1.0) * 2)
+					if pos < 0 {
+						pos = 0
+					}
+					if pos >= beatsPerBar {
+						pos = beatsPerBar - 1
+					}
+					positions[pos] = fmt.Sprintf("%d", note.Fret)
+				}
+			}
+
+			// Render positions with proper spacing
+			var posParts []string
+			for i, p := range positions {
+				beatNum := i / 2 // Which quarter note (0-3)
+
+				// Create padded position string
+				var posStr string
+				if p == "" {
+					posStr = strings.Repeat("─", posWidth)
+				} else {
+					// Center the fret number in the position width
+					padding := posWidth - len(p)
+					leftPad := padding / 2
+					rightPad := padding - leftPad
+					posStr = strings.Repeat("─", leftPad) + p + strings.Repeat("─", rightPad)
+				}
+
+				if isCurrentBar && beatNum == m.currentBeat {
+					posParts = append(posParts, activeStyle.Render(posStr))
+				} else if p != "" {
+					posParts = append(posParts, fretStyle.Render(posStr))
+				} else {
+					posParts = append(posParts, tabStyle.Render(posStr))
+				}
+			}
+			barParts = append(barParts, strings.Join(posParts, ""))
+		}
+
+		line := fmt.Sprintf("%s├%s┼%s┤", tabStyle.Render(name), barParts[0], barParts[1])
+		lines = append(lines, "  "+line)
+	}
+
+	return lines
 }
 
 // renderMiddleColumn renders the scale fretboard and chord tones fretboard
@@ -1448,14 +1584,39 @@ func (m *TUIModel) renderProgressBar() string {
 	filled := int(progress * float64(width))
 	bar := strings.Repeat("▓", filled) + strings.Repeat("░", width-filled)
 
-	controls := headerStyle.Render("  [space] pause  [←/→] seek  [↑/↓] transpose  [Shift+↑/↓] tempo  [[/]] capo  [{/}] visual capo  [</>] tuning  [l] lyrics  [t] tab  [q] quit")
+	// Build toggle status display
+	var toggles []string
+	if m.showChordNames {
+		toggles = append(toggles, "C")
+	}
+	if m.showLyrics {
+		toggles = append(toggles, "L")
+	}
+	if m.showMetronome {
+		toggles = append(toggles, "M")
+	}
+	if m.showStrumPattern {
+		toggles = append(toggles, "S")
+	}
+	if m.showTablature {
+		toggles = append(toggles, "T")
+	}
+	toggleStatus := ""
+	if len(toggles) > 0 {
+		toggleStatus = fmt.Sprintf(" [%s]", strings.Join(toggles, ""))
+	}
 
-	return fmt.Sprintf("  %s  %d%% (bar %d/%d)%s",
+	controls1 := headerStyle.Render("  [space] pause [←/→] seek [↑/↓] transpose [Shift+↑/↓] tempo [[/]] capo [</>] tuning [1-5] mute")
+	controls2 := headerStyle.Render("  [l]yrics [m]etro [s]trum [t]ab [c]hord [;/'] pattern [Shift+1-9] loop [q]uit")
+
+	return fmt.Sprintf("  %s  %d%% (bar %d/%d)%s\n%s\n%s",
 		progressStyle.Render(bar),
 		int(progress*100),
 		m.currentBar+1,
 		len(m.bars),
-		controls)
+		toggleStatus,
+		controls1,
+		controls2)
 }
 
 // Stop signals the model to stop
