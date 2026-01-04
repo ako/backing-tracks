@@ -355,25 +355,26 @@ func (m *TUIModel) getPickingPattern() []string {
 			"A|----0-------0---|",
 			"E|0-------0-------|",
 		}
-	case "arpeggio_up":
-		// p-i-m-a: Bass, G, B, e, Bass, G, B, e (ascending treble)
+	case "arpeggio_up", "arpeggio":
+		// Rolling arpeggio: Bass, D, G, B, e, B, G, D (up then down)
+		// Matches PatternArpeggio in midi/patterns.go
 		return []string{
-			"e|------0-------0-|",
-			"B|----0-------0---|",
-			"G|--0-------0-----|",
-			"D|----------------|",
+			"e|--------0-------|",
+			"B|------0---0-----|",
+			"G|----0-------0---|",
+			"D|--0-----------0-|",
 			"A|----------------|",
-			"E|0-------0-------|",
+			"E|0---------------|",
 		}
 	case "arpeggio_down":
-		// p-a-m-i: Bass, e, B, G, Bass, e, B, G (descending treble)
+		// Descending arpeggio: Bass, e, B, G, D, G, B, e (down then up)
 		return []string{
-			"e|--0-------0-----|",
+			"e|--0-----------0-|",
 			"B|----0-------0---|",
-			"G|------0-------0-|",
-			"D|----------------|",
+			"G|------0---0-----|",
+			"D|--------0-------|",
 			"A|----------------|",
-			"E|0-------0-------|",
+			"E|0---------------|",
 		}
 	default:
 		return []string{}
