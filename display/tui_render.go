@@ -195,12 +195,29 @@ func (m *TUIModel) renderHeader() string {
 func (m *TUIModel) renderLeftColumn() string {
 	var lines []string
 
-	// Adjust rows based on what's displayed (more components = fewer rows)
-	maxRows := 10 // Default: chords, lyrics, beats - compact
+	// Calculate rows based on lines per row
+	// Each row uses: chord(1) + lyrics(1) + strum(1) + beats(1) + tablature(6) + spacer(1)
+	linesPerRow := 2 // Minimum: chord names + spacer
+	if m.showLyrics {
+		linesPerRow++
+	}
+	if m.showStrumPattern {
+		linesPerRow++
+	}
+	if m.showMetronome {
+		linesPerRow++
+	}
 	if m.showTablature {
-		maxRows = 3 // Tablature takes 6+ lines per row
-	} else if m.showStrumPattern {
-		maxRows = 5 // Strum pattern takes more space
+		linesPerRow += 6 // 6 strings
+	}
+
+	// Target ~25 lines for left column content, calculate max rows
+	maxRows := 25 / linesPerRow
+	if maxRows < 3 {
+		maxRows = 3
+	}
+	if maxRows > 12 {
+		maxRows = 12
 	}
 
 	// In edit mode, follow the edit cursor; otherwise follow playback
