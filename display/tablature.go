@@ -56,8 +56,10 @@ func NewTablatureDisplay(track *parser.Track, tuning theory.Tuning, capo int) *T
 		Complexity:  "moderate",
 	}
 
-	// Set pattern based on track style
-	if track.Info.Style != "" {
+	// Set pattern based on rhythm style first, then track style
+	if track.Rhythm != nil && track.Rhythm.Style != "" {
+		config.PatternType = getPatternForRhythmStyle(track.Rhythm.Style)
+	} else if track.Info.Style != "" {
 		config.PatternType = getPatternForTrackStyle(track.Info.Style)
 	}
 
@@ -69,6 +71,31 @@ func NewTablatureDisplay(track *parser.Track, tuning theory.Tuning, capo int) *T
 		enabled:    false, // Disabled by default
 		currentBar: 0,
 		width:      80,
+	}
+}
+
+// getPatternForRhythmStyle maps rhythm style to pattern type
+func getPatternForRhythmStyle(style string) midi.PatternType {
+	style = strings.ToLower(style)
+	switch {
+	case strings.Contains(style, "travis"):
+		return midi.PatternTravis
+	case strings.Contains(style, "fingerpick"):
+		return midi.PatternFingerpick
+	case strings.Contains(style, "arpeggio"):
+		return midi.PatternArpeggio
+	case strings.Contains(style, "classical") || strings.Contains(style, "pima"):
+		return midi.PatternClassical
+	case strings.Contains(style, "bossa"):
+		return midi.PatternBossaNova
+	case strings.Contains(style, "ballad"):
+		return midi.PatternBallad
+	case strings.Contains(style, "waltz"):
+		return midi.PatternWaltz
+	case strings.Contains(style, "folk"):
+		return midi.PatternFolk
+	default:
+		return midi.PatternArpeggio
 	}
 }
 
