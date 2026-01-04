@@ -318,9 +318,68 @@ type ScaleConfig struct {
 	Type string `yaml:"type,omitempty"` // pentatonic_minor, blues, dorian, etc.
 }
 
-// GetSectionInfos returns section info from the track's progression
+// GetSectionInfos returns section info from the track
+// If Form and Sections are defined, builds section info from those
+// Otherwise falls back to parsing the Progression for section markers
 func (t *Track) GetSectionInfos() []SectionInfo {
+	// If we have Form and Sections, build section info from those
+	if len(t.Form) > 0 && len(t.Sections) > 0 {
+		return t.buildSectionInfosFromForm()
+	}
+	// Fall back to parsing progression for section markers
 	return t.Progression.GetSections()
+}
+
+// buildSectionInfosFromForm creates SectionInfo entries from Form and Sections
+func (t *Track) buildSectionInfosFromForm() []SectionInfo {
+	// Create a map of section name to section for quick lookup
+	sectionMap := make(map[string]*Section)
+	for i := range t.Sections {
+		sectionMap[t.Sections[i].Name] = &t.Sections[i]
+	}
+
+	var result []SectionInfo
+	currentBar := 0
+
+	for _, sectionName := range t.Form {
+		section, ok := sectionMap[sectionName]
+		if !ok {
+			continue
+		}
+
+		// Calculate how many bars this section takes
+		chords := section.Progression.GetChords()
+		sectionBars := 0
+		for _, chord := range chords {
+			sectionBars += int(math.Ceil(chord.Bars))
+		}
+
+		if sectionBars > 0 {
+			result = append(result, SectionInfo{
+				Name:     sectionName,
+				StartBar: currentBar,
+				EndBar:   currentBar + sectionBars,
+			})
+			currentBar += sectionBars
+		}
+	}
+
+	return result
+}
+
+// TrackForSave is a version of Track used for saving to YAML
+// It uses a pointer for Progression so it can be omitted when sections/form are used
+type TrackForSave struct {
+	Info        TrackInfo         `yaml:"track"`
+	Progression *ChordProgression `yaml:"chord_progression,omitempty"`
+	Sections    []Section         `yaml:"sections,omitempty"`
+	Form        []string          `yaml:"form,omitempty"`
+	Rhythm      *Rhythm           `yaml:"rhythm,omitempty"`
+	Bass        *Bass             `yaml:"bass,omitempty"`
+	Drums       *Drums            `yaml:"drums,omitempty"`
+	Lyrics      []string          `yaml:"lyrics,omitempty"`
+	Melody      *Melody           `yaml:"melody,omitempty"`
+	Scale       *ScaleConfig      `yaml:"scale,omitempty"`
 }
 
 // SaveTrack writes the track back to a BTML file
@@ -331,8 +390,27 @@ func SaveTrack(track *Track, filename string) error {
 		os.WriteFile(backupFilename, data, 0644)
 	}
 
+	// Create a save-friendly version of the track
+	saveTrack := TrackForSave{
+		Info:     track.Info,
+		Sections: track.Sections,
+		Form:     track.Form,
+		Rhythm:   track.Rhythm,
+		Bass:     track.Bass,
+		Drums:    track.Drums,
+		Lyrics:   track.Lyrics,
+		Melody:   track.Melody,
+		Scale:    track.Scale,
+	}
+
+	// Only include chord_progression if there are no sections or form
+	// When sections and form are defined, chord_progression is redundant
+	if len(track.Sections) == 0 && len(track.Form) == 0 {
+		saveTrack.Progression = &track.Progression
+	}
+
 	// Marshal the track to YAML
-	data, err := yaml.Marshal(track)
+	data, err := yaml.Marshal(saveTrack)
 	if err != nil {
 		return err
 	}

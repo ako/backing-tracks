@@ -224,7 +224,8 @@ func GeneratePlaybackDataWithPattern(track *parser.Track, fingerstylePattern Pat
 		return events[i].Tick < events[j].Tick
 	})
 
-	sections := track.Progression.GetSections()
+	// Get section info - handles both Form/Sections and Progression with markers
+	sections := track.GetSectionInfos()
 	lyrics := parser.BuildLyricsBlocks(track.Sections, sections)
 
 	// Build beat-mapped lyrics (new format)

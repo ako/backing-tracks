@@ -74,9 +74,15 @@ func isBeatLine(line string) bool {
 		}
 	}
 
-	// Must have at least one chord and one slash, or multiple slashes
-	// and most tokens must be valid beat markers
-	return hasChord && (hasSlash || len(tokens) >= 2) && float64(validTokens)/float64(len(tokens)) >= 0.8
+	// A beat line can be:
+	// 1. Has at least one chord and one slash (e.g., "C    /    /    /")
+	// 2. Has only slashes (continuation line, e.g., "/    /    /    /")
+	// Most tokens must be valid beat markers (chords or slashes)
+	if float64(validTokens)/float64(len(tokens)) < 0.8 {
+		return false
+	}
+	// Must have either a chord with slash/multiple tokens, or multiple slashes
+	return (hasChord && (hasSlash || len(tokens) >= 2)) || (hasSlash && validTokens >= 4)
 }
 
 // parseBeatLine extracts beat tokens with their character positions
@@ -519,13 +525,26 @@ func SerializeBeatLyrics(lyrics []BeatLyric, beatsPerBar int) string {
 		lyricsMap[key] = &lyrics[i]
 	}
 
-	// We also need to track chords that were in the original
-	// For simplicity, we'll use "/" for continuation beats
-	// The chord that was playing at each beat position
+	// Calculate dynamic beat width based on longest content
+	// Check each beat position and find the max width needed
+	beatWidth := 2 // Minimum width (for "/" plus space)
+	for _, bl := range lyrics {
+		// Check chord length
+		chordLen := len(bl.Chord)
+		if chordLen == 0 {
+			chordLen = 1 // "/" takes 1 char
+		}
+		if chordLen+1 > beatWidth { // +1 for spacing
+			beatWidth = chordLen + 1
+		}
+		// Check lyrics length
+		if len(bl.Lyrics)+1 > beatWidth {
+			beatWidth = len(bl.Lyrics) + 1
+		}
+	}
 
 	var result strings.Builder
 	barsPerLine := 2 // Output 2 bars per line (common format)
-	beatWidth := 5   // Width for each beat column
 
 	for startBar := minBar; startBar <= maxBar; startBar += barsPerLine {
 		endBar := startBar + barsPerLine
