@@ -155,13 +155,27 @@ During playback, you'll see:
 | `t` | Toggle inline tablature |
 | `Q` / `Esc` | Quit |
 
-**Lyrics Edit Mode** (press `e` to enter when track has lyrics):
-| Key | Action |
-|-----|--------|
-| `←` / `→` | Select previous / next word |
-| `Shift+←` / `Shift+→` | Move selected word one beat earlier / later |
-| `Enter` | Save changes to BTML file and exit |
-| `Esc` | Discard changes and exit |
+**Edit Mode** (press `e` to enter):
+
+Edit mode has four focus areas, cycle with `Ctrl+F`: **Lyrics** → **Form** → **Sections** → **Track**
+
+| Key | Lyrics | Form | Sections | Track |
+|-----|--------|------|----------|-------|
+| `↑` / `↓` | Previous/next line | Select entry | Select section | Select field |
+| `←` / `→` | Previous/next beat | — | Select chord | Cycle options* |
+| `Shift+←/→` | Move word earlier/later | — | — | — |
+| `Tab` / `Shift+Tab` | Shift all words from here | — | — | Next field |
+| `1-9` / `+` | — | Add section | — | — |
+| `-` / `Del` | Delete word | Remove entry | Delete chord | — |
+| `Shift+↑/↓` | — | Reorder entry | — | — |
+| `r` | — | — | Rename section | — |
+| `Space` | — | — | Commit chord | — |
+| Type | Edit word | — | Edit chord | Edit value |
+| `Ctrl+N` | Create new section (works in any focus) |||
+| `Ctrl+S` | Save and exit ||||
+| `Esc` | Discard and exit ||||
+
+*Fields with cycling options: **Style** (blues, jazz, rock...), **Tuning** (standard, drop_d...), **Bass** (root, walking...), **Drums** (rock_beat, shuffle...)
 
 ![Live Display Screenshot](screenshot-player.png)
 
@@ -487,8 +501,9 @@ backing-tracks/
 - **v0.4:** ✅ Live visual display with chord and beat tracking
 - **v0.5:** ✅ Scale display, chord charts, melody generation, Strudel export
 - **v0.6:** ✅ 16th note rhythms, Bubbletea TUI
-- **v0.7:** Mini-notation parser (Strudel-inspired)
-- **v0.8:** LLM integration for generating BTML from songs
+- **v0.7:** ✅ Full TUI edit mode (lyrics, form, sections, track properties)
+- **v0.8:** Mini-notation parser (Strudel-inspired)
+- **v0.9:** LLM integration for generating BTML from songs
 
 ## Dependencies
 
@@ -525,7 +540,15 @@ Contributions welcome! See:
 
 ## What's New
 
-**v0.6 (Current)**
+**v0.7 (Current)**
+- ✅ **Full edit mode**: Edit lyrics, form, sections, and track properties in the TUI
+- ✅ **Track property editor**: Edit title, key, tempo, style, tuning, bass, drums directly
+- ✅ **Cycle through options**: Use ←/→ to scroll through style, tuning, bass, and drums presets
+- ✅ **Form editor**: Add, remove, and reorder sections in the song structure
+- ✅ **Sections editor**: Edit chord progressions, rename sections, create new sections
+- ✅ **Lyrics timing editor**: Move words between beats with Shift+←/→
+
+**v0.6**
 - ✅ **Lyrics support**: Add chord-over-lyrics in sections, display during playback (`l` to toggle)
 - ✅ **Real-time playback controls**: Pause/resume (space), seek (←/→)
 - ✅ **Transpose controls**: Shift song up/down by semitones (↑/↓)

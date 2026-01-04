@@ -4,7 +4,7 @@
 
 This is a terminal-based backing track player written in Go that uses YAML-based DSL (Domain-Specific Language) called BTML (Backing Track Markup Language) to define complete backing tracks for guitar practice.
 
-**Current Version:** v0.6
+**Current Version:** v0.7
 
 **Purpose:** Enable guitarists to create and play full-band backing tracks (chords, bass, drums) from simple YAML files, with real-time visual display showing current chord and beat.
 
@@ -315,8 +315,9 @@ timidity /tmp/backing-track.mid  # If timidity installed
 
 - **v0.5**: ✅ Scale display for soloing, chord charts, melody generation
 - **v0.6**: ✅ 16th note rhythms, Bubbletea TUI
-- **v0.7**: Mini-notation parser (Strudel-inspired)
-- **v0.8**: LLM integration for generating BTML from songs
+- **v0.7**: ✅ Full TUI edit mode (lyrics, form, sections, track properties)
+- **v0.8**: Mini-notation parser (Strudel-inspired)
+- **v0.9**: LLM integration for generating BTML from songs
 
 ## Dependencies
 
@@ -393,6 +394,7 @@ When adding features:
 
 ## Version History
 
+- **v0.7**: Full TUI edit mode (lyrics, form, sections, track properties)
 - **v0.6**: 16th note rhythms, Bubbletea TUI with three-column layout
 - **v0.5**: Scale display, chord charts, melody generation, Strudel export
 - **v0.4**: Live visual display with current chord and beat
@@ -402,6 +404,6 @@ When adding features:
 
 ---
 
-**Last Updated:** 2025-12-23
+**Last Updated:** 2026-01-04
 **Maintained By:** Human + Claude
 **License:** MIT
