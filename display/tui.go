@@ -149,8 +149,11 @@ type TUIModel struct {
 	editFocus        string   // Current edit focus area
 	editFormIndex    int      // Selected form entry index
 	editSectionIndex int      // Selected section index
+	editChordIndex   int      // Selected chord index within section (-1 = adding new)
 	editForm         []string // Working copy of form for editing
 	editChordInput   string   // Current chord input buffer
+	editSectionRename bool    // Whether renaming a section
+	editSectionName   string  // New section name being typed
 
 	// Audio player (optional - for synced playback)
 	player PlayerController
@@ -258,6 +261,10 @@ func (m *TUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// Cycle focus: lyrics -> form -> sections -> lyrics
 				m.cycleEditFocus()
 				return m, nil
+			case "ctrl+n":
+				// Create a new section
+				m.createNewSection()
+				return m, nil
 			}
 
 			// Handle keys based on current focus
@@ -267,7 +274,7 @@ func (m *TUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "form":
 				return m.handleFormEditKeys(key)
 			case "sections":
-				return m.handleSectionsEditKeys(key)
+				return m.handleSectionsEditKeys(key, msg)
 			}
 
 			// Ignore other keys in edit mode
@@ -1479,7 +1486,7 @@ func (m *TUIModel) renderFormAndSectionsEditor() string {
 	// Sections header
 	sectionsHeaderText := " SECTIONS"
 	if m.editFocus == "sections" {
-		sectionsHeaderText = focusedHeaderStyle.Render(" SECTIONS") + " (type chord, Space add, Del remove)"
+		sectionsHeaderText = focusedHeaderStyle.Render(" SECTIONS") + " (←→ select, type to edit, Del remove)"
 	} else {
 		sectionsHeaderText = headerStyle.Render(" SECTIONS")
 	}
@@ -1491,56 +1498,91 @@ func (m *TUIModel) renderFormAndSectionsEditor() string {
 		lines = append(lines, normalStyle.Render("   (no sections defined)"))
 	} else {
 		for i, section := range m.track.Sections {
-			// Section name
-			sectionPrefix := "   "
+			// Section name with number (for form editing - press number to add)
+			sectionNum := i + 1 // 1-based for user display
 			if m.editFocus == "sections" && i == m.editSectionIndex {
-				lines = append(lines, selectedStyle.Render(fmt.Sprintf(" ▶ %s ", section.Name)))
+				if m.editSectionRename {
+					// Show rename input
+					lines = append(lines, selectedStyle.Render(fmt.Sprintf(" ▶ %d. %s_ ", sectionNum, m.editSectionName)))
+				} else {
+					lines = append(lines, selectedStyle.Render(fmt.Sprintf(" ▶ %d. %s ", sectionNum, section.Name)))
+				}
 			} else {
-				lines = append(lines, normalStyle.Render(fmt.Sprintf("%s%s", sectionPrefix, section.Name)))
+				lines = append(lines, normalStyle.Render(fmt.Sprintf("   %d. %s", sectionNum, section.Name)))
 			}
 
-			// Show chord progression with wrapping
+			// Show chord progression with wrapping and individual chord selection
 			chords := section.Progression.GetChords()
-			if len(chords) > 0 {
-				var chordNames []string
-				for _, c := range chords {
-					chordNames = append(chordNames, c.Symbol)
-				}
+			isSelected := m.editFocus == "sections" && i == m.editSectionIndex
 
+			if len(chords) > 0 || isSelected {
 				// Wrap chords to multiple lines (max ~30 chars per line)
 				maxLineWidth := 30
 				indent := "     "
-				var chordLines []string
-				currentLine := ""
 
-				for _, chord := range chordNames {
-					if currentLine == "" {
-						currentLine = chord
-					} else if len(currentLine)+1+len(chord) <= maxLineWidth {
-						currentLine += " " + chord
+				// Build lines with individual chord highlighting
+				currentLine := indent
+				currentLineLen := 0
+
+				for chordIdx, c := range chords {
+					chordText := c.Symbol
+					// Include duration modifier if not 1.0
+					if c.Bars != 1.0 {
+						if c.Bars == float64(int(c.Bars)) {
+							chordText = fmt.Sprintf("%s*%d", c.Symbol, int(c.Bars))
+						} else {
+							chordText = fmt.Sprintf("%s*%g", c.Symbol, c.Bars)
+						}
+					}
+					chordLen := len(chordText)
+
+					// Check if we need to wrap to a new line
+					if currentLineLen > 0 && currentLineLen+1+chordLen > maxLineWidth {
+						lines = append(lines, currentLine)
+						currentLine = indent
+						currentLineLen = 0
+					}
+
+					// Add space separator if not at start of line
+					if currentLineLen > 0 {
+						currentLine += " "
+						currentLineLen++
+					}
+
+					// Highlight selected chord
+					if isSelected && chordIdx == m.editChordIndex {
+						// If editing this chord, show input buffer
+						if m.editChordInput != "" {
+							chordText = m.editChordInput + "_"
+						} else {
+							chordText = "[" + chordText + "]"
+						}
+						currentLine += selectedStyle.Render(chordText)
+					} else if isSelected {
+						currentLine += focusedHeaderStyle.Render(chordText)
 					} else {
-						chordLines = append(chordLines, currentLine)
-						currentLine = chord
+						currentLine += dimStyle.Render(chordText)
 					}
-				}
-				if currentLine != "" {
-					chordLines = append(chordLines, currentLine)
+					currentLineLen += chordLen
 				}
 
-				// Highlight if editing this section
-				isSelected := m.editFocus == "sections" && i == m.editSectionIndex
+				// Show input for adding new chord at end
+				if isSelected && m.editChordIndex == -1 && m.editChordInput != "" {
+					// Start a new line for the input to avoid overflow
+					if currentLine != indent {
+						lines = append(lines, currentLine)
+						currentLine = indent
+					}
+					inputDisplay := "+" + m.editChordInput + "_"
+					currentLine += selectedStyle.Render(inputDisplay)
+				}
 
-				for j, chordLine := range chordLines {
-					displayLine := indent + chordLine
-					// Show chord input on the last line if editing
-					if isSelected && j == len(chordLines)-1 && m.editChordInput != "" {
-						displayLine = indent + chordLine + " + " + selectedStyle.Render(m.editChordInput+"_")
-					}
-					if isSelected {
-						lines = append(lines, focusedHeaderStyle.Render(displayLine))
-					} else {
-						lines = append(lines, dimStyle.Render(displayLine))
-					}
+				// Add the last line
+				if currentLine != indent {
+					lines = append(lines, currentLine)
+				} else if isSelected {
+					// Show placeholder when section has no chords
+					lines = append(lines, indent+dimStyle.Render("(no chords - type to add)"))
 				}
 			}
 		}
@@ -1717,21 +1759,10 @@ func (m *TUIModel) trackHasLyrics() bool {
 	return false
 }
 
-// trackCanEdit checks if the track has content that can be edited (lyrics, sections, or form)
+// trackCanEdit checks if the track can be edited
+// Always allow edit mode - user can create new sections with Ctrl+N
 func (m *TUIModel) trackCanEdit() bool {
-	if m.track == nil {
-		return false
-	}
-	// Can edit if there are sections
-	if len(m.track.Sections) > 0 {
-		return true
-	}
-	// Can edit if there's a form
-	if len(m.track.Form) > 0 {
-		return true
-	}
-	// Can edit if there are lyrics
-	return m.trackHasLyrics()
+	return m.track != nil
 }
 
 // toggleEditMode enters or exits lyrics edit mode
@@ -1755,11 +1786,13 @@ func (m *TUIModel) toggleEditMode() {
 	}
 
 	m.editMode = true
+	m.showLyrics = true    // Always enable lyrics display in edit mode for adding/editing
 	m.editFocus = "lyrics" // Start with lyrics focus
 	m.editBar = m.currentBar
 	m.editBeat = 0
 	m.editFormIndex = 0
 	m.editSectionIndex = 0
+	m.editChordIndex = -1 // -1 means "add new chord" mode
 	m.editChordInput = ""
 	m.editDirty = false
 }
@@ -2219,9 +2252,16 @@ func (m *TUIModel) handleFormEditKeys(key string) (tea.Model, tea.Cmd) {
 			m.editDirty = true
 		}
 		return m, nil
-	case "+", "=", "a":
-		// Add section to form - show picker for available sections
-		m.showFormSectionPicker()
+	case "+", "=":
+		// Add section to form - cycle through available sections
+		m.cycleFormSectionPicker()
+		return m, nil
+	case "1", "2", "3", "4", "5", "6", "7", "8", "9":
+		// Add specific section by number (1 = first section, etc.)
+		sectionIdx := int(key[0] - '1') // Convert '1'-'9' to 0-8
+		if sectionIdx < len(m.track.Sections) {
+			m.addSectionToForm(m.track.Sections[sectionIdx].Name)
+		}
 		return m, nil
 	case "-", "d", "backspace", "delete":
 		// Remove selected entry from form
@@ -2263,65 +2303,263 @@ func (m *TUIModel) handleFormEditKeys(key string) (tea.Model, tea.Cmd) {
 }
 
 // handleSectionsEditKeys handles keyboard input when focus is on sections
-func (m *TUIModel) handleSectionsEditKeys(key string) (tea.Model, tea.Cmd) {
+func (m *TUIModel) handleSectionsEditKeys(key string, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// Handle rename mode first
+	if m.editSectionRename {
+		switch key {
+		case "enter":
+			// Confirm rename
+			if m.editSectionName != "" && m.editSectionIndex >= 0 && m.editSectionIndex < len(m.track.Sections) {
+				oldName := m.track.Sections[m.editSectionIndex].Name
+				newName := m.editSectionName
+				m.track.Sections[m.editSectionIndex].Name = newName
+				// Update form references to this section
+				for i, formEntry := range m.editForm {
+					if formEntry == oldName {
+						m.editForm[i] = newName
+					}
+				}
+				m.editDirty = true
+			}
+			m.editSectionRename = false
+			m.editSectionName = ""
+			return m, nil
+		case "esc":
+			// Cancel rename
+			m.editSectionRename = false
+			m.editSectionName = ""
+			return m, nil
+		case "backspace":
+			// Remove last character
+			if len(m.editSectionName) > 0 {
+				m.editSectionName = m.editSectionName[:len(m.editSectionName)-1]
+			}
+			return m, nil
+		default:
+			// Add typed characters to name
+			if len(msg.Runes) > 0 {
+				for _, r := range msg.Runes {
+					if r >= 32 && r <= 126 {
+						m.editSectionName += string(r)
+					}
+				}
+			}
+			return m, nil
+		}
+	}
+
+	// Get chord count for current section
+	chordCount := 0
+	if m.editSectionIndex >= 0 && m.editSectionIndex < len(m.track.Sections) {
+		chordCount = len(m.track.Sections[m.editSectionIndex].Progression.GetChords())
+	}
+
+	// Check for rename trigger (r key when not typing a chord)
+	if key == "r" && m.editChordInput == "" && m.editChordIndex == -1 {
+		if m.editSectionIndex >= 0 && m.editSectionIndex < len(m.track.Sections) {
+			m.editSectionRename = true
+			m.editSectionName = "" // Start with empty name
+			return m, nil
+		}
+	}
+
+	// First, check if this has printable runes (handles all typing including *, #, ., 0-9, etc.)
+	// Check runes regardless of key type since some terminals report differently
+	if len(msg.Runes) > 0 {
+		// Don't capture space here - it's handled specially below
+		if !(len(msg.Runes) == 1 && msg.Runes[0] == ' ') {
+			for _, r := range msg.Runes {
+				if r >= 32 && r <= 126 {
+					m.editChordInput += string(r)
+				}
+			}
+			return m, nil
+		}
+	}
+
 	switch key {
 	case "up":
-		// Move selection up
+		// Move selection up to previous section
 		if m.editSectionIndex > 0 {
 			m.editSectionIndex--
+			m.editChordIndex = -1 // Reset to "add new" mode
 			m.editChordInput = ""
 		}
 		return m, nil
 	case "down":
-		// Move selection down
+		// Move selection down to next section
 		if m.editSectionIndex < len(m.track.Sections)-1 {
 			m.editSectionIndex++
+			m.editChordIndex = -1 // Reset to "add new" mode
 			m.editChordInput = ""
 		}
 		return m, nil
+	case "left":
+		// Move to previous chord (or wrap to "add new" mode)
+		m.editChordInput = "" // Clear any pending input
+		if m.editChordIndex == -1 {
+			// Wrap from "add new" to last chord
+			if chordCount > 0 {
+				m.editChordIndex = chordCount - 1
+			}
+		} else if m.editChordIndex > 0 {
+			m.editChordIndex--
+		}
+		return m, nil
+	case "right":
+		// Move to next chord (or to "add new" mode)
+		m.editChordInput = "" // Clear any pending input
+		if m.editChordIndex == -1 {
+			// From "add new" mode, move to first chord
+			if chordCount > 0 {
+				m.editChordIndex = 0
+			}
+		} else if m.editChordIndex < chordCount-1 {
+			m.editChordIndex++
+		} else {
+			m.editChordIndex = -1 // Move to "add new" mode
+		}
+		return m, nil
 	case "backspace":
-		// Remove last character from chord input
 		if len(m.editChordInput) > 0 {
+			// Remove last character from chord input
 			m.editChordInput = m.editChordInput[:len(m.editChordInput)-1]
+		} else if m.editChordIndex >= 0 {
+			// Delete selected chord
+			m.removeChordFromSection(m.editChordIndex)
+			// Adjust selection after deletion
+			if m.editChordIndex >= chordCount-1 {
+				m.editChordIndex = chordCount - 2
+			}
+			if m.editChordIndex < 0 {
+				m.editChordIndex = -1
+			}
+		}
+		return m, nil
+	case "delete":
+		// Delete selected chord or last chord
+		if m.editChordIndex >= 0 {
+			m.removeChordFromSection(m.editChordIndex)
+			if m.editChordIndex >= chordCount-1 {
+				m.editChordIndex = chordCount - 2
+			}
+			if m.editChordIndex < 0 {
+				m.editChordIndex = -1
+			}
+		} else if chordCount > 0 {
+			m.removeLastChordFromSection()
 		}
 		return m, nil
 	case " ":
-		// Space commits the chord and starts a new one
+		// Space commits the chord
 		if m.editChordInput != "" {
-			m.addChordToSection(m.editChordInput)
+			if m.editChordIndex >= 0 {
+				// Replace selected chord
+				m.replaceChordInSection(m.editChordIndex, m.editChordInput)
+				m.editChordIndex++ // Move to next chord
+				newChordCount := len(m.track.Sections[m.editSectionIndex].Progression.GetChords())
+				if m.editChordIndex >= newChordCount {
+					m.editChordIndex = -1 // Move to "add new" mode
+				}
+			} else {
+				// Add new chord
+				m.addChordToSection(m.editChordInput)
+			}
 			m.editChordInput = ""
 		}
 		return m, nil
 	case "enter":
 		// Commit any pending chord, then save and exit
 		if m.editChordInput != "" {
-			m.addChordToSection(m.editChordInput)
+			if m.editChordIndex >= 0 {
+				m.replaceChordInSection(m.editChordIndex, m.editChordInput)
+			} else {
+				m.addChordToSection(m.editChordInput)
+			}
 			m.editChordInput = ""
 		}
 		m.saveEdits()
 		return m, nil
-	case "delete":
-		// Remove last chord from the selected section
-		m.removeLastChordFromSection()
+	case ".", "*", "#", "/", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9":
+		// Fallback for chord notation characters if msg.Runes was empty
+		m.editChordInput += key
 		return m, nil
-	default:
-		// Handle printable characters for chord input
-		if len(key) == 1 && key[0] >= 32 && key[0] <= 126 {
-			m.editChordInput += key
-			return m, nil
-		}
 	}
 	return m, nil
 }
 
-// showFormSectionPicker cycles through available sections to add to the form
-func (m *TUIModel) showFormSectionPicker() {
+// cycleFormSectionPicker cycles through available sections when pressing +
+// Each press of + changes the last added section to the next available section
+func (m *TUIModel) cycleFormSectionPicker() {
 	if len(m.track.Sections) == 0 {
 		return
 	}
-	// Add the first available section (or cycle through them)
-	// For simplicity, just add the first section
-	sectionName := m.track.Sections[0].Name
+
+	// If we just added a section, cycle it to the next one
+	// Otherwise, add a new section
+	if len(m.editForm) > 0 && m.editFormIndex < len(m.editForm) {
+		currentSection := m.editForm[m.editFormIndex]
+		// Find current section index
+		currentIdx := -1
+		for i, s := range m.track.Sections {
+			if s.Name == currentSection {
+				currentIdx = i
+				break
+			}
+		}
+		// Cycle to next section
+		nextIdx := (currentIdx + 1) % len(m.track.Sections)
+		m.editForm[m.editFormIndex] = m.track.Sections[nextIdx].Name
+		m.editDirty = true
+	} else {
+		// No form entries, add the first section
+		m.addSectionToForm(m.track.Sections[0].Name)
+	}
+}
+
+// createNewSection creates a new empty section with a unique name
+func (m *TUIModel) createNewSection() {
+	// Generate a unique section name
+	baseName := "new"
+	name := baseName
+	counter := 1
+	for {
+		exists := false
+		for _, s := range m.track.Sections {
+			if s.Name == name {
+				exists = true
+				break
+			}
+		}
+		if !exists {
+			break
+		}
+		counter++
+		name = fmt.Sprintf("%s%d", baseName, counter)
+	}
+
+	// Create new section with empty chord progression
+	newSection := parser.Section{
+		Name: name,
+		Progression: parser.ChordProgression{
+			Pattern:      "",
+			BarsPerChord: 1,
+		},
+	}
+
+	// Add to track sections
+	m.track.Sections = append(m.track.Sections, newSection)
+
+	// Switch to sections focus and select the new section
+	m.editFocus = "sections"
+	m.editSectionIndex = len(m.track.Sections) - 1
+	m.editChordIndex = -1
+	m.editChordInput = ""
+	m.editDirty = true
+}
+
+// addSectionToForm adds a section by name to the form after the current position
+func (m *TUIModel) addSectionToForm(sectionName string) {
 	insertIdx := m.editFormIndex + 1
 	if len(m.editForm) == 0 {
 		insertIdx = 0
@@ -2363,6 +2601,41 @@ func (m *TUIModel) removeLastChordFromSection() {
 		section.Progression.Pattern = parser.StringOrList(strings.Join(parts, " "))
 		m.editDirty = true
 	}
+}
+
+// removeChordFromSection removes a chord at a specific index from the current section's progression
+func (m *TUIModel) removeChordFromSection(index int) {
+	if m.editSectionIndex < 0 || m.editSectionIndex >= len(m.track.Sections) {
+		return
+	}
+	section := &m.track.Sections[m.editSectionIndex]
+	currentPattern := string(section.Progression.Pattern)
+	parts := strings.Fields(currentPattern)
+	if index < 0 || index >= len(parts) {
+		return
+	}
+	// Remove the chord at index
+	newParts := make([]string, 0, len(parts)-1)
+	newParts = append(newParts, parts[:index]...)
+	newParts = append(newParts, parts[index+1:]...)
+	section.Progression.Pattern = parser.StringOrList(strings.Join(newParts, " "))
+	m.editDirty = true
+}
+
+// replaceChordInSection replaces a chord at a specific index in the current section's progression
+func (m *TUIModel) replaceChordInSection(index int, newChord string) {
+	if m.editSectionIndex < 0 || m.editSectionIndex >= len(m.track.Sections) {
+		return
+	}
+	section := &m.track.Sections[m.editSectionIndex]
+	currentPattern := string(section.Progression.Pattern)
+	parts := strings.Fields(currentPattern)
+	if index < 0 || index >= len(parts) {
+		return
+	}
+	parts[index] = newChord
+	section.Progression.Pattern = parser.StringOrList(strings.Join(parts, " "))
+	m.editDirty = true
 }
 
 // expandTrackSections rebuilds the Progression from Sections and Form
@@ -2410,19 +2683,58 @@ func (m *TUIModel) expandTrackSections() {
 }
 
 // renderRightColumn renders the chord charts and picking pattern
+// In edit mode, shows track properties at the top
 func (m *TUIModel) renderRightColumn() string {
 	var lines []string
 
-	// Picking pattern (if fingerpicking style)
-	if m.isFingerPickingStyle() {
-		lines = append(lines, lipgloss.NewStyle().Bold(true).Render(" Picking Pattern:"))
-		for _, patternLine := range m.getPickingPattern() {
-			lines = append(lines, " "+patternLine)
+	// In edit mode, show track properties at the top
+	if m.editMode {
+		headerStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFFFFF"))
+		labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#888888"))
+		valueStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00FFFF"))
+
+		lines = append(lines, headerStyle.Render(" TRACK PROPERTIES"))
+		lines = append(lines, lipgloss.NewStyle().Foreground(lipgloss.Color("#666666")).Render(" ─────────────────────────────────"))
+		lines = append(lines, fmt.Sprintf(" %s %s", labelStyle.Render("Title:"), valueStyle.Render(m.track.Info.Title)))
+		lines = append(lines, fmt.Sprintf(" %s %s", labelStyle.Render("Key:"), valueStyle.Render(m.track.Info.Key)))
+		lines = append(lines, fmt.Sprintf(" %s %s", labelStyle.Render("Tempo:"), valueStyle.Render(fmt.Sprintf("%d BPM", m.track.Info.Tempo))))
+		lines = append(lines, fmt.Sprintf(" %s %s", labelStyle.Render("Time:"), valueStyle.Render(m.track.Info.TimeSignature)))
+		lines = append(lines, fmt.Sprintf(" %s %s", labelStyle.Render("Style:"), valueStyle.Render(m.track.Info.Style)))
+		if m.track.Info.Capo > 0 {
+			lines = append(lines, fmt.Sprintf(" %s %s", labelStyle.Render("Capo:"), valueStyle.Render(fmt.Sprintf("Fret %d", m.track.Info.Capo))))
+		}
+		if m.track.Info.Tuning != "" && m.track.Info.Tuning != "standard" {
+			lines = append(lines, fmt.Sprintf(" %s %s", labelStyle.Render("Tuning:"), valueStyle.Render(m.track.Info.Tuning)))
+		}
+		if m.track.Rhythm != nil && m.track.Rhythm.Style != "" {
+			lines = append(lines, fmt.Sprintf(" %s %s", labelStyle.Render("Rhythm:"), valueStyle.Render(m.track.Rhythm.Style)))
+		}
+		if m.track.Bass != nil && m.track.Bass.Style != "" {
+			lines = append(lines, fmt.Sprintf(" %s %s", labelStyle.Render("Bass:"), valueStyle.Render(m.track.Bass.Style)))
+		}
+		if m.track.Drums != nil && m.track.Drums.Style != "" {
+			lines = append(lines, fmt.Sprintf(" %s %s", labelStyle.Render("Drums:"), valueStyle.Render(m.track.Drums.Style)))
 		}
 		lines = append(lines, "")
 	}
 
-	// Chord charts for unique chords - 3 per row
+	// Hide picking pattern and chord charts in edit mode
+	if !m.editMode {
+		// Picking pattern (if fingerpicking style)
+		if m.isFingerPickingStyle() {
+			lines = append(lines, lipgloss.NewStyle().Bold(true).Render(" Picking Pattern:"))
+			for _, patternLine := range m.getPickingPattern() {
+				lines = append(lines, " "+patternLine)
+			}
+			lines = append(lines, "")
+		}
+	}
+
+	// Chord charts for unique chords - 3 per row (hidden in edit mode)
+	if m.editMode {
+		return strings.Join(lines, "\n")
+	}
+
 	uniqueChords := m.getUniqueChords()
 	var allDiagrams [][]string
 
@@ -2714,9 +3026,9 @@ func (m *TUIModel) renderProgressBar() string {
 		case "form":
 			controls1 = headerStyle.Render("  [↑/↓] select [1-9/+] add section [-/Del] remove [Shift+↑/↓] reorder")
 		case "sections":
-			controls1 = headerStyle.Render("  [↑/↓] select section [type] chord name [Space] add chord [Del] remove last chord")
+			controls1 = headerStyle.Render("  [↑/↓] section [←/→] chord [r] rename [type] chord [Space] add [Del] remove")
 		}
-		controls2 = headerStyle.Render("  [Ctrl+F] switch focus [Ctrl+S] save [Esc] cancel")
+		controls2 = headerStyle.Render("  [Ctrl+F] focus [Ctrl+N] new section [Ctrl+S] save [Esc] cancel")
 	} else {
 		// Playback mode help
 		controls1 = headerStyle.Render("  [space] pause [←/→] seek [↑/↓] transpose [Shift+↑/↓] tempo [[/]] capo [</>] tuning [1-5] mute")
