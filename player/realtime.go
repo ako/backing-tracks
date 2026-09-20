@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -143,10 +144,10 @@ func NewRealtimePlayer(track *parser.Track, soundFont string) (*RealtimePlayer, 
 
 	// Start FluidSynth in interactive mode
 	cmd := exec.Command("fluidsynth",
-		"-a", "pulseaudio", // or "alsa"
-		"-q",               // Quiet mode
-		"-s",               // Start as server (interactive)
-		"-g", "1.0",        // Gain
+		"-a", audioDriver(), // Platform audio driver
+		"-q",                // Quiet mode
+		"-s",                // Start as server (interactive)
+		"-g", "1.0",         // Gain
 		soundFont,
 	)
 
@@ -197,6 +198,14 @@ func NewRealtimePlayer(track *parser.Track, soundFont string) (*RealtimePlayer, 
 	player.sendCommand(fmt.Sprintf("prog 3 %d", 24))                                  // Fingerstyle (nylon guitar)
 
 	return player, nil
+}
+
+// audioDriver returns the FluidSynth audio driver for the current platform
+func audioDriver() string {
+	if runtime.GOOS == "darwin" {
+		return "coreaudio"
+	}
+	return "pulseaudio"
 }
 
 // sendCommand sends a command to FluidSynth
